@@ -1,0 +1,112 @@
+---
+title: Docker (Standalone)
+description: 'Run Ringee with standalone Docker containers'
+---
+
+<Warning>
+This method is for **advanced users** who want granular control over each container. For most users, we recommend using [Docker Compose](/installation/docker-compose) instead.
+</Warning>
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) installed
+- A running **PostgreSQL** instance
+- A running **Redis** instance
+- API keys for required services (see [Configuration Reference](/configuration/reference))
+
+## Setup external services
+
+If you don't already have PostgreSQL and Redis running, start them with Docker:
+
+```bash
+# PostgreSQL
+docker run -d \
+  --name ringee-db \
+  -e POSTGRES_USER=ringee-user \
+  -e POSTGRES_PASSWORD=ringee-password \
+  -e POSTGRES_DB=ringee-db-local \
+  -p 5432:5432 \
+  postgres:16
+
+# Redis
+docker run -d \
+  --name ringee-redis \
+  -p 6379:6379 \
+  redis:7-alpine
+```
+
+## Build the Docker image
+
+```bash
+git clone https://github.com/ringee-io/ringee.git
+cd ringee
+docker build -t ringee .
+```
+
+## Run the services
+
+### Backend
+
+```bash
+docker run -d \
+  --name ringee-backend \
+  --env-file .env \
+  -e DATABASE_URL="postgresql://ringee-user:ringee-password@host.docker.internal:5432/ringee-db-local?schema=public" \
+  -e REDIS_URL="redis://host.docker.internal:6379" \
+  -p 3000:3000 \
+  ringee backend
+```
+
+### Worker
+
+```bash
+docker run -d \
+  --name ringee-worker \
+  --env-file .env \
+  -e DATABASE_URL="postgresql://ringee-user:ringee-password@host.docker.internal:5432/ringee-db-local?schema=public" \
+  -e REDIS_URL="redis://host.docker.internal:6379" \
+  ringee worker
+```
+
+### Frontend (Admin)
+
+```bash
+docker run -d \
+  --name ringee-frontend \
+  --env-file .env \
+  -p 4200:4200 \
+  ringee frontend
+```
+
+### Frontend (Consumer)
+
+```bash
+docker run -d \
+  --name ringee-frontend-b2c \
+  --env-file .env \
+  -p 4201:4201 \
+  ringee frontend-b2c
+```
+
+## Verify
+
+Check all containers are running:
+
+```bash
+docker ps --filter "name=ringee"
+```
+
+Then open:
+- **Admin frontend** → [http://localhost:4200](http://localhost:4200)
+- **Consumer frontend** → [http://localhost:4201](http://localhost:4201)
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration/reference">
+    Full environment variable reference
+  </Card>
+  <Card title="Telnyx Setup" icon="phone" href="/providers/telnyx">
+    Configure telephony
+  </Card>
+</CardGroup>

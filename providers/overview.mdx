@@ -1,0 +1,50 @@
+---
+title: Provider Overview
+description: 'How telephony providers work in Ringee'
+---
+
+## How telephony works
+
+Ringee uses **telephony providers** to make and receive phone calls. A provider is a service that connects your browser to the global phone network (PSTN) using WebRTC technology.
+
+```mermaid
+flowchart LR;
+    classDef app fill:#15803D,color:white,stroke:#fff
+    classDef provider fill:#22C55E,color:white,stroke:#fff
+    classDef network fill:#86EFAC,color:black,stroke:#fff
+
+    browser[Your Browser]:::app
+    backend[Ringee Backend]:::app
+    provider[Telephony Provider]:::provider
+    pstn[Phone Network - PSTN]:::network
+
+    browser -- WebRTC --> provider
+    backend -- REST API --> provider
+    provider -- SIP --> pstn
+```
+
+When you make a call in Ringee:
+
+1. Your browser establishes a **WebRTC** session with the telephony provider
+2. The Ringee backend uses the provider's **REST API** to manage the call (create, transfer, record, etc.)
+3. The provider bridges the WebRTC connection to the **PSTN** (public phone network)
+
+## Current Providers
+
+| Provider | Status | Protocol | Notes |
+|---|---|---|---|
+| [Telnyx](/providers/telnyx) | ✅ Active | WebRTC + REST API | Default and recommended provider |
+
+## Features per provider
+
+All providers must support these core features:
+
+- **Outbound calls** — Make calls to any phone number worldwide
+- **Inbound calls** — Receive calls on purchased phone numbers
+- **Call recording** — Record calls and store them in R2
+- **Phone number management** — Purchase and manage phone numbers via API
+- **WebRTC** — Browser-based calling without any installed apps
+
+## Want to add a new provider?
+
+See [How to add a new provider](/providers/add-provider) for a guide on integrating additional telephony providers into Ringee.

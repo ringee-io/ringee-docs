@@ -1,0 +1,104 @@
+---
+title: Docker Compose
+description: 'Deploy Ringee with Docker Compose (recommended)'
+---
+
+<Info>
+This is the **recommended** way to run Ringee for production use. It handles all services (PostgreSQL, Redis, Frontend, Backend, Worker) in a single configuration.
+</Info>
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
+- API keys for required services (see [Configuration Reference](/configuration/reference))
+
+## Installation
+
+<Steps>
+<Step title="Clone the repository">
+
+```bash
+git clone https://github.com/ringee-io/ringee.git
+cd ringee
+```
+
+</Step>
+
+<Step title="Create your environment file">
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` in your editor and fill in your API keys. At minimum, you need:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` — [Get from Clerk](/configuration/clerk)
+- `TELNYX_API_KEY` and `TELNYX_CONNECTION_ID` — [Get from Telnyx](/providers/telnyx)
+- `STRIPE_SECRET_KEY` — [Get from Stripe](/configuration/stripe)
+
+See the full [Configuration Reference](/configuration/reference) for all available options.
+
+</Step>
+
+<Step title="Start all services">
+
+```bash
+docker-compose -f docker-compose.app.yml up --build -d
+```
+
+This will start:
+- **PostgreSQL** database
+- **Redis** cache
+- **Backend** API server
+- **Worker** background processor
+- **Admin Frontend** on port `4200`
+- **Consumer Frontend** on port `4201`
+
+</Step>
+
+<Step title="Verify the installation">
+
+Check that all containers are running:
+
+```bash
+docker-compose -f docker-compose.app.yml ps
+```
+
+Then open:
+- **Admin frontend** → [http://localhost:4200](http://localhost:4200)
+- **Consumer frontend** → [http://localhost:4201](http://localhost:4201)
+
+</Step>
+</Steps>
+
+<Note>
+When using `docker-compose.app.yml`, the values for `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, and `REDIS_URL` are **automatically overridden** to use Docker internal hostnames. You don't need to set these manually.
+</Note>
+
+## Useful commands
+
+```bash
+# View logs
+docker-compose -f docker-compose.app.yml logs -f
+
+# Stop all services
+docker-compose -f docker-compose.app.yml down
+
+# Restart a specific service
+docker-compose -f docker-compose.app.yml restart backend
+
+# Rebuild after code changes
+docker-compose -f docker-compose.app.yml up --build -d
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration/reference">
+    Fine-tune your environment variables
+  </Card>
+  <Card title="Docker Config" icon="docker" href="/configuration/docker-compose">
+    Learn about Docker-specific configuration options
+  </Card>
+</CardGroup>

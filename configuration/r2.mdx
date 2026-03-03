@@ -1,0 +1,75 @@
+---
+title: R2 Configuration
+description: 'Set up Cloudflare R2 for file storage'
+---
+
+Ringee uses [Cloudflare R2](https://developers.cloudflare.com/r2/) for storing files such as call recordings, contact imports, and other media.
+
+## Setup
+
+<Steps>
+<Step title="Create a Cloudflare account">
+
+If you don't have one already, create an account at [cloudflare.com](https://dash.cloudflare.com/sign-up).
+
+</Step>
+
+<Step title="Create an R2 bucket">
+
+1. Navigate to **R2 Object Storage** in the Cloudflare dashboard
+2. Click **Create bucket**
+3. Give it a name (e.g., `ringee-storage`)
+4. Select a location (or leave as automatic)
+
+</Step>
+
+<Step title="Generate API credentials">
+
+1. Go to **R2** → **Manage R2 API Tokens**
+2. Click **Create API token**
+3. Grant **Object Read & Write** permissions
+4. Copy the **Access Key ID** and **Secret Access Key**
+
+</Step>
+
+<Step title="Set up public access (optional)">
+
+If you need public URLs for stored files:
+
+1. Go to your bucket → **Settings** → **Public Access**
+2. Enable public access and note the public bucket URL
+
+</Step>
+
+<Step title="Configure environment variables">
+
+Add the following to your `.env` file:
+
+```env
+CLOUDFLARE_BUCKETNAME="ringee-storage"
+CLOUDFLARE_ACCOUNT_ID="your_account_id"
+CLOUDFLARE_ACCESS_KEY="your_access_key"
+CLOUDFLARE_SECRET_ACCESS_KEY="your_secret_access_key"
+CLOUDFLARE_BUCKET_URL="https://your-bucket-url.r2.dev"
+CLOUDFLARE_REGION="auto"
+STORAGE_PROVIDER="cloudflare"
+```
+
+</Step>
+</Steps>
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `CLOUDFLARE_BUCKETNAME` | Yes | Name of your R2 bucket |
+| `CLOUDFLARE_ACCOUNT_ID` | Yes | Your Cloudflare account ID |
+| `CLOUDFLARE_ACCESS_KEY` | Yes | R2 API access key ID |
+| `CLOUDFLARE_SECRET_ACCESS_KEY` | Yes | R2 API secret access key |
+| `CLOUDFLARE_BUCKET_URL` | Yes | Public URL for the bucket |
+| `CLOUDFLARE_REGION` | No | Region (default: `auto`) |
+| `STORAGE_PROVIDER` | No | Storage provider (default: `cloudflare`) |
+
+<Tip>
+Your **Cloudflare Account ID** can be found in the Cloudflare dashboard URL or under **Account Home** → **Overview** on the right sidebar.
+</Tip>

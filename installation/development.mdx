@@ -1,0 +1,145 @@
+---
+title: Development Environment
+description: 'Set up Ringee for local development'
+---
+
+<Info>
+This guide is for **developers** who want to contribute to Ringee or run it locally for development. For production use, see [Docker Compose](/installation/docker-compose).
+</Info>
+
+## Prerequisites
+
+- **Node.js** 20 or higher
+- **pnpm** 8 or higher
+- **PostgreSQL** 16
+- **Redis** 7
+
+## Installation
+
+<Steps>
+<Step title="Clone the repository">
+
+```bash
+git clone https://github.com/ringee-io/ringee.git
+cd ringee
+```
+
+</Step>
+
+<Step title="Install dependencies">
+
+Ringee uses a pnpm monorepo. Install all dependencies:
+
+```bash
+pnpm install
+```
+
+</Step>
+
+<Step title="Configure environment">
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and fill in your API keys. For local development, the database and Redis defaults should work if you have them running locally:
+
+```env
+DATABASE_URL="postgresql://ringee-user:ringee-password@localhost:5432/ringee-db-local?schema=public"
+REDIS_URL="redis://localhost:6379"
+REDIS_HOST="localhost"
+REDIS_PORT=6379
+```
+
+See the [Configuration Reference](/configuration/reference) for all variables.
+
+</Step>
+
+<Step title="Set up the database">
+
+Generate the Prisma client and run migrations:
+
+```bash
+pnpm prisma generate
+pnpm prisma migrate dev
+```
+
+</Step>
+
+<Step title="Start the development servers">
+
+Run all services concurrently:
+
+```bash
+pnpm dev
+```
+
+Or start services individually:
+
+```bash
+# Backend API
+pnpm --filter backend dev
+
+# Worker
+pnpm --filter worker dev
+
+# Admin Frontend (B2B)
+pnpm --filter frontend dev
+
+# Consumer Frontend (B2C)
+pnpm --filter frontend-b2c dev
+```
+
+</Step>
+</Steps>
+
+## Access the application
+
+| Service | URL |
+|---|---|
+| Admin Frontend (B2B) | [http://localhost:4200](http://localhost:4200) |
+| Consumer Frontend (B2C) | [http://localhost:4201](http://localhost:4201) |
+| Backend API | [http://localhost:3000](http://localhost:3000) |
+
+## Project structure
+
+```
+ringee/
+├── apps/
+│   ├── frontend/         # Next.js admin app (B2B)
+│   ├── frontend-b2c/     # Next.js consumer app (B2C)
+│   ├── backend/          # NestJS REST API
+│   └── worker/           # NestJS background jobs
+├── packages/             # Shared libraries
+├── prisma/               # Database schema & migrations
+├── docker-compose.app.yml
+├── .env.example
+└── package.json
+```
+
+## Useful commands
+
+```bash
+# Run database migrations
+pnpm prisma migrate dev
+
+# Open Prisma Studio (database GUI)
+pnpm prisma studio
+
+# Lint all packages
+pnpm lint
+
+# Type check
+pnpm type-check
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration/reference">
+    Understand all configuration options
+  </Card>
+  <Card title="How it works" icon="diagram-project" href="/howitworks">
+    Learn the architecture
+  </Card>
+</CardGroup>

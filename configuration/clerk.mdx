@@ -1,0 +1,92 @@
+---
+title: Clerk Configuration
+description: 'Set up Clerk for authentication'
+---
+
+Ringee uses [Clerk](https://clerk.com) for authentication and multi-tenant team management. Clerk handles user sign-up, sign-in, organization management, and role-based access control.
+
+## Setup
+
+<Steps>
+<Step title="Create a Clerk application">
+
+1. Go to [clerk.com](https://clerk.com) and create an account
+2. Create a new application
+3. Select the authentication methods you want to support (e.g., Email, Google, GitHub)
+
+</Step>
+
+<Step title="Get your API keys">
+
+In the Clerk dashboard, go to **API Keys** and copy:
+
+- **Publishable key** (starts with `pk_`)
+- **Secret key** (starts with `sk_`)
+
+</Step>
+
+<Step title="Set up webhooks">
+
+Ringee needs Clerk webhooks to sync user and organization events:
+
+1. Go to **Webhooks** in the Clerk dashboard
+2. Click **Add Endpoint**
+3. Set the endpoint URL to: `https://your-backend-url/api/clerk/webhook`
+4. Select the following events:
+   - `user.created`
+   - `user.updated`
+   - `user.deleted`
+   - `organization.created`
+   - `organization.updated`
+   - `organizationMembership.created`
+   - `organizationMembership.deleted`
+5. Copy the **Signing Secret**
+
+</Step>
+
+<Step title="Configure redirect URLs">
+
+In the Clerk dashboard, go to **Paths** and configure:
+
+- **Sign-in URL**: `/auth/sign-in`
+- **Sign-up URL**: `/auth/sign-up`
+- **After sign-in URL**: `/dashboard/overview`
+- **After sign-up URL**: `/dashboard/overview`
+
+</Step>
+
+<Step title="Configure environment variables">
+
+Add the following to your `.env` file:
+
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_your_publishable_key"
+CLERK_PUBLISHABLE_KEY="pk_test_your_publishable_key"
+CLERK_SECRET_KEY="sk_test_your_secret_key"
+CLERK_WEBHOOK_SIGNING_SECRET="whsec_your_webhook_secret"
+
+NEXT_PUBLIC_CLERK_SIGN_IN_URL="/auth/sign-in"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL="/auth/sign-up"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard/overview"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/dashboard/overview"
+```
+
+</Step>
+</Steps>
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key (exposed to frontend) |
+| `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key (backend) |
+| `CLERK_SECRET_KEY` | Yes | Clerk secret key |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Yes | Webhook signing secret |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | No | Sign-in page path (default: `/auth/sign-in`) |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | No | Sign-up page path (default: `/auth/sign-up`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | No | Redirect after sign-in (default: `/dashboard/overview`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | No | Redirect after sign-up (default: `/dashboard/overview`) |
+
+<Note>
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_PUBLISHABLE_KEY` can be set to the same value. The `NEXT_PUBLIC_` prefix makes it available to the Next.js frontend.
+</Note>

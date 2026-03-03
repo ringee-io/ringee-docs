@@ -1,0 +1,157 @@
+---
+title: Configuration Reference
+description: 'Environment variables reference for Ringee'
+---
+
+Ringee is configured entirely through environment variables. Any change to environment variables requires an **application restart**.
+
+The full example file can be found at: [`.env.example` on GitHub](https://github.com/ringee-io/ringee/blob/main/.env.example)
+
+## Required Settings
+
+### Application
+
+#### `DATABASE_URL`
+
+PostgreSQL connection string. Ringee uses Prisma ORM.
+
+```
+postgresql://ringee-user:ringee-password@localhost:5432/ringee-db-local?schema=public
+```
+
+#### `REDIS_URL`
+
+```
+redis://localhost:6379
+```
+
+#### `REDIS_HOST`
+
+```
+localhost
+```
+
+#### `REDIS_PORT`
+
+```
+6379
+```
+
+#### `FRONTEND_URL`
+
+URL where the admin frontend is served.
+
+```
+http://localhost:4200
+```
+
+#### `BACKEND_URL` / `PUBLIC_BACKEND_URL`
+
+URL where the backend API is served.
+
+```
+http://localhost:3000
+```
+
+#### `APP_ENCRYPTION_SECRET`
+
+A random string used for encrypting sensitive data at the application level. Should be unique per installation.
+
+---
+
+### Authentication (Clerk)
+
+See the [Clerk Configuration](/configuration/clerk) guide for setup details.
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key (backend) |
+| `CLERK_SECRET_KEY` | Clerk secret key |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook signing secret |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Sign-in page URL (default: `/auth/sign-in`) |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Sign-up page URL (default: `/auth/sign-up`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Redirect after sign-in (default: `/dashboard/overview`) |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Redirect after sign-up (default: `/dashboard/overview`) |
+
+---
+
+### Telephony (Telnyx)
+
+See the [Telnyx Configuration](/providers/telnyx) guide for setup details.
+
+| Variable | Description |
+|---|---|
+| `TELNYX_API_KEY` | Your Telnyx API key |
+| `TELNYX_CONNECTION_ID` | Telnyx WebRTC connection ID |
+| `TELNYX_SIP_USER` | SIP username for WebRTC |
+| `TELNYX_SIP_PASSWORD` | SIP password for WebRTC |
+| `NEXT_PUBLIC_TELNYX_LOGIN` | SIP login exposed to frontend |
+| `NEXT_PUBLIC_TELNYX_PASSWORD` | SIP password exposed to frontend |
+
+---
+
+### Payments (Stripe)
+
+See the [Stripe Configuration](/configuration/stripe) guide for setup details.
+
+| Variable | Description |
+|---|---|
+| `STRIPE_SECRET_KEY` | Your Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+
+---
+
+### Email (Resend)
+
+See the [Email Configuration](/configuration/email) guide for details.
+
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Your Resend API key |
+| `EMAIL_FROM_ADDRESS` | Sender email address |
+| `EMAIL_FROM_NAME` | Sender display name |
+
+---
+
+### Storage (Cloudflare R2)
+
+See the [R2 Configuration](/configuration/r2) guide for details.
+
+| Variable | Description |
+|---|---|
+| `CLOUDFLARE_BUCKETNAME` | R2 bucket name |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `CLOUDFLARE_ACCESS_KEY` | R2 access key |
+| `CLOUDFLARE_SECRET_ACCESS_KEY` | R2 secret access key |
+| `CLOUDFLARE_BUCKET_URL` | Public bucket URL |
+| `CLOUDFLARE_REGION` | Region (default: `auto`) |
+| `STORAGE_PROVIDER` | Storage provider (default: `cloudflare`) |
+
+---
+
+## Optional Settings
+
+### Frontend
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL for the frontend |
+| `NEXT_PUBLIC_SITE_URL` | Public site URL |
+| `NEXT_PUBLIC_APP_ENV` | App environment (`development` / `production`) |
+
+### Sentry (Error Tracking)
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN |
+| `NEXT_PUBLIC_SENTRY_ORG` | Sentry organization slug |
+| `NEXT_PUBLIC_SENTRY_PROJECT` | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | Sentry auth token |
+| `NEXT_PUBLIC_SENTRY_DISABLED` | Disable Sentry (`true` / `false`) |
+
+### AI
+
+| Variable | Description |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI API key (used for AI features) |

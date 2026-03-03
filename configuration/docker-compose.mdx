@@ -1,0 +1,71 @@
+---
+title: Docker Compose Configuration
+description: 'Docker-specific configuration and overrides'
+---
+
+## Overview
+
+When running Ringee with `docker-compose.app.yml`, several environment variables are **automatically overridden** to use Docker's internal networking. You don't need to manually set these.
+
+## Automatic Overrides
+
+The following variables are set automatically by Docker Compose:
+
+| Variable | Docker Value |
+|---|---|
+| `DATABASE_URL` | `postgresql://ringee-user:ringee-password@postgres:5432/ringee-db-local?schema=public` |
+| `REDIS_HOST` | `redis` |
+| `REDIS_PORT` | `6379` |
+| `REDIS_URL` | `redis://redis:6379` |
+
+<Note>
+The hostnames `postgres` and `redis` refer to the Docker internal service names. These are resolved automatically by Docker's internal DNS.
+</Note>
+
+## Volumes
+
+The default Docker Compose configuration creates the following **persistent volumes**:
+
+| Volume | Purpose |
+|---|---|
+| `postgres-data` | PostgreSQL database files |
+| `redis-data` | Redis persistence data |
+
+## Ports
+
+Default port mapping:
+
+| Service | Host Port | Container Port |
+|---|---|---|
+| Admin Frontend | `4200` | `4200` |
+| Consumer Frontend | `4201` | `4201` |
+| Backend API | `3000` | `3000` |
+| PostgreSQL | `5432` | `5432` |
+| Redis | `6379` | `6379` |
+
+## Customizing ports
+
+To change the host ports, modify the `ports` section in `docker-compose.app.yml`:
+
+```yaml
+services:
+  frontend:
+    ports:
+      - "8080:4200"  # Access admin on port 8080 instead
+```
+
+<Warning>
+If you change the frontend or backend ports, remember to update the corresponding `FRONTEND_URL`, `PUBLIC_BACKEND_URL`, and `NEXT_PUBLIC_API_BASE_URL` environment variables accordingly.
+</Warning>
+
+## Rebuilding
+
+After making changes to the codebase or environment:
+
+```bash
+# Rebuild and restart all containers
+docker-compose -f docker-compose.app.yml up --build -d
+
+# Rebuild only a specific service
+docker-compose -f docker-compose.app.yml up --build -d backend
+```

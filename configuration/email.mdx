@@ -1,0 +1,52 @@
+---
+title: Email Configuration
+description: 'Set up transactional email with Resend'
+---
+
+Ringee uses [Resend](https://resend.com) for sending transactional emails such as notifications and team invitations.
+
+## Setup
+
+<Steps>
+<Step title="Create a Resend account">
+
+Go to [resend.com](https://resend.com) and create an account.
+
+</Step>
+
+<Step title="Add and verify your domain">
+
+In the Resend dashboard, navigate to **Domains** and add your domain. Follow the instructions to verify it by adding the required DNS records.
+
+</Step>
+
+<Step title="Get your API key">
+
+Go to **API Keys** in the Resend dashboard and create a new key.
+
+</Step>
+
+<Step title="Configure environment variables">
+
+Add the following to your `.env` file:
+
+```env
+RESEND_API_KEY="re_your_api_key_here"
+EMAIL_FROM_ADDRESS="no-reply@yourdomain.com"
+EMAIL_FROM_NAME="Ringee"
+```
+
+</Step>
+</Steps>
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `RESEND_API_KEY` | Yes | Your Resend API key |
+| `EMAIL_FROM_ADDRESS` | Yes | The sender email address (must be from a verified domain) |
+| `EMAIL_FROM_NAME` | Yes | The sender display name shown in emails |
+
+<Warning>
+The `EMAIL_FROM_ADDRESS` must use a domain that you've verified in Resend. Using an unverified domain will cause email delivery failures.
+</Warning>

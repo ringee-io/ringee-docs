@@ -1,0 +1,77 @@
+---
+title: Stripe Configuration
+description: 'Set up Stripe for billing and payments'
+---
+
+Ringee uses [Stripe](https://stripe.com) for managing credits, subscriptions, and phone number purchases.
+
+## Setup
+
+<Steps>
+<Step title="Create a Stripe account">
+
+Go to [stripe.com](https://stripe.com) and create an account if you don't have one.
+
+</Step>
+
+<Step title="Get your API keys">
+
+1. In the Stripe dashboard, go to **Developers** → **API keys**
+2. Copy your **Secret key**
+
+<Warning>
+For development, use **test mode** keys (prefix `sk_test_`). Switch to live keys only for production.
+</Warning>
+
+</Step>
+
+<Step title="Set up webhooks">
+
+Ringee needs Stripe webhooks to process payment events:
+
+1. Go to **Developers** → **Webhooks**
+2. Click **Add endpoint**
+3. Set the endpoint URL to: `https://your-backend-url/api/stripe/webhook`
+4. Select the events to listen to:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+5. Copy the **Signing secret**
+
+</Step>
+
+<Step title="Configure environment variables">
+
+Add the following to your `.env` file:
+
+```env
+STRIPE_SECRET_KEY="sk_test_your_secret_key"
+STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret"
+```
+
+</Step>
+</Steps>
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Yes | Your Stripe secret API key |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret for verifying events |
+
+## Testing locally
+
+For local development, use the [Stripe CLI](https://stripe.com/docs/stripe-cli) to forward webhook events:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+This will output a webhook signing secret that you can use as `STRIPE_WEBHOOK_SECRET` during development.
+
+<Tip>
+The Stripe CLI is the easiest way to test webhooks locally. Install it with `brew install stripe/stripe-cli/stripe` on macOS.
+</Tip>
