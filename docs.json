@@ -55,7 +55,7 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/ringee-io/ringee",
+          "href": "https://github.com/ringee-io/ringee-app",
           "icon": "github"
         },
         {
@@ -75,7 +75,7 @@
       {
         "icon": "github",
         "label": "GitHub",
-        "href": "https://github.com/ringee-io/ringee"
+        "href": "https://github.com/ringee-io/ringee-app"
       }
     ],
     "primary": {
@@ -96,7 +96,7 @@
   "footer": {
     "socials": {
       "x": "https://x.com/RingeeIO",
-      "github": "https://github.com/ringee-io/ringee"
+      "github": "https://github.com/ringee-io/ringee-app"
     }
   }
 }
