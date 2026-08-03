@@ -1,0 +1,238 @@
+/* ==========================================================================
+   Ringee Documentation — visual system
+   --------------------------------------------------------------------------
+   Loaded automatically by Mintlify from the root of the docs repo.
+
+   Structure:
+     1. Brand tokens
+     2. Per-tab accent (wayfinding)
+     3. Badges — HTTP methods, MCP trust levels, CLI, SDK
+     4. Callout rows and definition chips
+     5. Readability — tables, inline code, headings
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ *
+   1. Brand tokens
+   ------------------------------------------------------------------ */
+
+:root {
+  /* Ringee emerald — matches the marketing site. Shifted one step darker than
+     the site's emerald-600 so badge text clears WCAG AA (4.5:1) on a tint. */
+  --rg-brand: #047857;
+  --rg-brand-strong: #065f46;
+  --rg-brand-soft: #34d399;
+
+  /* Semantic hues. Each is verified at >= 4.5:1 against its own 10% tint. */
+  --rg-green: #047857;
+  --rg-blue: #0369a1;
+  --rg-violet: #6d28d9;
+  --rg-amber: #92400e;
+  --rg-rose: #be123c;
+  --rg-slate: #475569;
+
+  /* Default section accent — overridden per tab in section 2. */
+  --rg-accent: var(--rg-brand);
+
+  --rg-tint: 10%;
+  --rg-radius: 6px;
+}
+
+/* Dark mode. Mintlify toggles `.dark` on <html>; the attribute selectors are
+   defensive so the palette survives a change in that implementation. */
+html.dark,
+html[data-theme="dark"],
+[data-theme="dark"] {
+  --rg-brand: #34d399;
+  --rg-brand-strong: #6ee7b7;
+  --rg-brand-soft: #059669;
+
+  --rg-green: #34d399;
+  --rg-blue: #38bdf8;
+  --rg-violet: #a78bfa;
+  --rg-amber: #fbbf24;
+  --rg-rose: #fb7185;
+  --rg-slate: #94a3b8;
+
+  --rg-tint: 16%;
+}
+
+/* ------------------------------------------------------------------ *
+   2. Per-tab accent
+   Each developer surface carries its own hue so you always know which
+   of the five tabs you are reading. The brand emerald stays global.
+   ------------------------------------------------------------------ */
+
+html[data-current-path^="/api"] {
+  --rg-accent: var(--rg-blue);
+}
+
+html[data-current-path^="/mcp"] {
+  --rg-accent: var(--rg-violet);
+}
+
+html[data-current-path^="/cli"] {
+  --rg-accent: var(--rg-amber);
+}
+
+html[data-current-path^="/dialer-sdk"] {
+  --rg-accent: var(--rg-brand);
+}
+
+/* ------------------------------------------------------------------ *
+   3. Badges
+   ------------------------------------------------------------------ */
+
+.rg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.15em 0.5em;
+  border: 1px solid color-mix(in oklab, var(--rg-badge-color, var(--rg-accent)) 35%, transparent);
+  border-radius: var(--rg-radius);
+  background: color-mix(in oklab, var(--rg-badge-color, var(--rg-accent)) var(--rg-tint), transparent);
+  color: var(--rg-badge-color, var(--rg-accent));
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Table cells full of badges should not wrap mid-badge. */
+table :where(td, th) .rg-badge {
+  font-size: 0.78em;
+}
+
+/* --- HTTP methods --------------------------------------------------- */
+
+.rg-get {
+  --rg-badge-color: var(--rg-green);
+}
+
+.rg-post {
+  --rg-badge-color: var(--rg-blue);
+}
+
+.rg-put {
+  --rg-badge-color: var(--rg-amber);
+}
+
+.rg-patch {
+  --rg-badge-color: var(--rg-violet);
+}
+
+.rg-delete {
+  --rg-badge-color: var(--rg-rose);
+}
+
+/* --- Trust levels (MCP tools, and any action with a blast radius) ---- */
+
+.rg-read {
+  --rg-badge-color: var(--rg-slate);
+}
+
+.rg-write {
+  --rg-badge-color: var(--rg-blue);
+}
+
+.rg-sensitive {
+  --rg-badge-color: var(--rg-amber);
+}
+
+.rg-destructive {
+  --rg-badge-color: var(--rg-rose);
+}
+
+/* --- Direction (inbound / outbound events) -------------------------- */
+
+.rg-in {
+  --rg-badge-color: var(--rg-violet);
+}
+
+.rg-out {
+  --rg-badge-color: var(--rg-green);
+}
+
+/* --- Neutral / brand ------------------------------------------------ */
+
+.rg-neutral {
+  --rg-badge-color: var(--rg-slate);
+}
+
+.rg-brand {
+  --rg-badge-color: var(--rg-brand);
+}
+
+/* --- Legend row ----------------------------------------------------- *
+   A one-line key placed above a reference table so the colours are
+   self-explanatory before you start scanning.                          */
+
+.rg-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.15rem;
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--rg-accent) 20%, transparent);
+  border-radius: var(--rg-radius);
+  background: color-mix(in oklab, var(--rg-accent) 4%, transparent);
+  font-size: 0.85em;
+  line-height: 1.9;
+}
+
+/* ------------------------------------------------------------------ *
+   4. Endpoint and command headers
+   A compact, coloured "method + path" line for narrative pages, mirroring
+   the header the OpenAPI pages render automatically.
+   ------------------------------------------------------------------ */
+
+.rg-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1.25rem 0;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--rg-accent) 22%, transparent);
+  border-left: 3px solid var(--rg-accent);
+  border-radius: var(--rg-radius);
+  background: color-mix(in oklab, var(--rg-accent) 5%, transparent);
+}
+
+.rg-endpoint code,
+.rg-endpoint .rg-path {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  font-weight: 500;
+  background: none;
+  border: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ *
+   5. Readability
+   ------------------------------------------------------------------ */
+
+/* Tables are the primary reference surface in these docs — give them
+   breathing room and a clearly anchored header row. */
+table :where(th) {
+  font-size: 0.86em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+table :where(td, th) {
+  vertical-align: top;
+}
+
+/* Keep identifier-heavy cells from wrapping into unreadable slivers. */
+table :where(td) > code:only-child {
+  white-space: nowrap;
+}

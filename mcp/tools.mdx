@@ -5,27 +5,36 @@ description: 'Every tool the Ringee MCP server exposes'
 
 The Ringee MCP server exposes 19 tools. Each is annotated with MCP trust hints so clients can decide when to ask for confirmation.
 
+Trust levels are colour-coded throughout this tab:
+
+<div className="rg-legend">
+  <span className="rg-badge rg-read">Read</span> looks, never changes anything &nbsp;·&nbsp;
+  <span className="rg-badge rg-write">Write</span> creates or updates a record &nbsp;·&nbsp;
+  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints a shareable link &nbsp;·&nbsp;
+  <span className="rg-badge rg-destructive">Destructive</span> removes access or data
+</div>
+
 | Tool | Type | Spends credits |
 |---|---|---|
-| [`list_workspaces`](#list-workspaces) | Read | No |
-| [`switch_workspace`](#switch-workspace) | Write | No |
-| [`search_contacts`](#search-contacts) | Read | No |
-| [`get_contact`](#get-contact) | Read | No |
-| [`find_contacts_by_outcome`](#find-contacts-by-outcome) | Read | No |
-| [`list_calls`](#list-calls) | Read | No |
-| [`create_contact`](#create-contact) | Write | No |
-| [`update_contact`](#update-contact) | Write | No |
-| [`delete_contact`](#delete-contact) | **Destructive** | No |
-| [`log_call_outcome`](#log-call-outcome) | Write | No |
-| [`create_callback`](#create-callback) | Write | No |
-| [`schedule_meeting`](#schedule-meeting) | Write | No |
-| [`create_call_session`](#create-call-session) | **Sensitive** | No |
-| [`get_call_session`](#get-call-session) | Read | No |
-| [`update_call_session`](#update-call-session) | Write | No |
-| [`delete_call_session`](#delete-call-session) | **Destructive** | No |
-| [`search_leads`](#search-leads) | Read | Provider only |
-| [`reveal_lead`](#reveal-lead) | **Sensitive** | Provider only |
-| [`import_leads_as_contacts`](#import-leads-as-contacts) | Write | No |
+| [`list_workspaces`](#list_workspaces) | <span className="rg-badge rg-read">Read</span> | No |
+| [`switch_workspace`](#switch_workspace) | <span className="rg-badge rg-write">Write</span> | No |
+| [`search_contacts`](#search_contacts) | <span className="rg-badge rg-read">Read</span> | No |
+| [`get_contact`](#get_contact) | <span className="rg-badge rg-read">Read</span> | No |
+| [`find_contacts_by_outcome`](#find_contacts_by_outcome) | <span className="rg-badge rg-read">Read</span> | No |
+| [`list_calls`](#list_calls) | <span className="rg-badge rg-read">Read</span> | No |
+| [`create_contact`](#create_contact) | <span className="rg-badge rg-write">Write</span> | No |
+| [`update_contact`](#update_contact) | <span className="rg-badge rg-write">Write</span> | No |
+| [`delete_contact`](#delete_contact) | <span className="rg-badge rg-destructive">Destructive</span> | No |
+| [`log_call_outcome`](#log_call_outcome) | <span className="rg-badge rg-write">Write</span> | No |
+| [`create_callback`](#create_callback) | <span className="rg-badge rg-write">Write</span> | No |
+| [`schedule_meeting`](#schedule_meeting) | <span className="rg-badge rg-write">Write</span> | No |
+| [`create_call_session`](#create_call_session) | <span className="rg-badge rg-sensitive">Sensitive</span> | No |
+| [`get_call_session`](#get_call_session) | <span className="rg-badge rg-read">Read</span> | No |
+| [`update_call_session`](#update_call_session) | <span className="rg-badge rg-write">Write</span> | No |
+| [`delete_call_session`](#delete_call_session) | <span className="rg-badge rg-destructive">Destructive</span> | No |
+| [`search_leads`](#search_leads) | <span className="rg-badge rg-read">Read</span> | Provider only |
+| [`reveal_lead`](#reveal_lead) | <span className="rg-badge rg-sensitive">Sensitive</span> | Provider only |
+| [`import_leads_as_contacts`](#import_leads_as_contacts) | <span className="rg-badge rg-write">Write</span> | No |
 
 <Note>
 No MCP tool ever debits Ringee calling credits. `search_leads` and `reveal_lead` consume the allowance of your connected enrichment provider (Apollo or Prospeo).
@@ -130,6 +139,8 @@ All other fields match `create_contact`. Ownership is verified before writing.
 
 ### `delete_contact`
 
+<span className="rg-badge rg-destructive">Destructive</span>
+
 Soft-deletes a contact by setting `deletedAt`.
 
 <ParamField body="contactId" type="string (uuid)" required>The contact to delete.</ParamField>
@@ -207,6 +218,8 @@ A **call session** is a queue of contacts plus a magic link that lets someone di
 
 ### `create_call_session`
 
+<span className="rg-badge rg-sensitive">Sensitive</span>
+
 <ParamField body="contacts" type="object[]" required>
   Ordered queue, 1 to 500 entries. Each accepts `contactId` and/or `phoneNumber` (E.164, required when `contactId` is absent), plus optional `name`, `company`, `jobTitle`, `state`, `website`, `revenue`, `companySize`. Provide `contactId` when you have it — name and phone are then looked up server-side.
 </ParamField>
@@ -238,6 +251,8 @@ Returns safe metadata — status, contact count, calls completed, expiry, and wh
 <ParamField body="metadata" type="object">Replace metadata.</ParamField>
 
 ### `delete_call_session`
+
+<span className="rg-badge rg-destructive">Destructive</span>
 
 Revokes the session. Past calls are preserved, but every active magic link stops working immediately.
 
@@ -279,6 +294,8 @@ Searches for candidates. Results are **not** contacts yet.
 Returns a `jobId` plus candidates with `externalId`, person and company summaries, and whether emails and phones are available. Pass the `jobId` to the two tools below.
 
 ### `reveal_lead`
+
+<span className="rg-badge rg-sensitive">Sensitive</span> <span className="rg-badge rg-neutral">Spends provider credits</span>
 
 Reveals a candidate's email — and optionally a mobile phone — and upserts a Ringee contact so the lead is immediately callable.
 

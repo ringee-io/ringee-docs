@@ -11,9 +11,44 @@ ringee [--json] <group> <command> [args] [options]
 
 Phone numbers are **E.164** (`+14155552671`). Datetimes are **ISO-8601 with an offset** (`2026-05-23T14:30:00-04:00`).
 
+## Every command at a glance
+
+<div className="rg-legend">
+  <span className="rg-badge rg-read">Read</span> looks, never changes anything &nbsp;·&nbsp;
+  <span className="rg-badge rg-write">Write</span> creates or updates a record &nbsp;·&nbsp;
+  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints a shareable link &nbsp;·&nbsp;
+  <span className="rg-badge rg-destructive">Destructive</span> removes access or data
+</div>
+
+| Command | Type | Guard |
+|---|---|---|
+| [`contacts search`](#contacts-search) | <span className="rg-badge rg-read">Read</span> | — |
+| [`contacts get`](#contacts-get) | <span className="rg-badge rg-read">Read</span> | — |
+| [`contacts by-outcome`](#contacts-by-outcome) | <span className="rg-badge rg-read">Read</span> | — |
+| [`contacts create`](#contacts-create) | <span className="rg-badge rg-write">Write</span> | — |
+| [`contacts update`](#contacts-update) | <span className="rg-badge rg-write">Write</span> | — |
+| [`contacts delete`](#contacts-delete) | <span className="rg-badge rg-destructive">Destructive</span> | `--confirm-phone` + `--yes` |
+| [`leads search`](#leads-search) | <span className="rg-badge rg-read">Read</span> | — |
+| [`leads reveal`](#leads-reveal) | <span className="rg-badge rg-sensitive">Sensitive</span> | `--yes` |
+| [`leads import`](#leads-import) | <span className="rg-badge rg-write">Write</span> | — |
+| [`sessions create`](#sessions-create) | <span className="rg-badge rg-sensitive">Sensitive</span> | `--yes` |
+| [`sessions get`](#sessions-get) | <span className="rg-badge rg-read">Read</span> | — |
+| [`sessions update`](#sessions-update) | <span className="rg-badge rg-write">Write</span> | — |
+| [`sessions revoke`](#sessions-revoke) | <span className="rg-badge rg-destructive">Destructive</span> | `--yes` |
+| [`calls list`](#calls-list) | <span className="rg-badge rg-read">Read</span> | — |
+| [`outcomes log`](#outcomes-log) | <span className="rg-badge rg-write">Write</span> | — |
+| [`callbacks create`](#callbacks-create) | <span className="rg-badge rg-write">Write</span> | — |
+| [`meetings schedule`](#meetings-schedule) | <span className="rg-badge rg-write">Write</span> | — |
+| [`config show`](#config-and-knowledge) / [`config check`](#config-and-knowledge) | <span className="rg-badge rg-read">Read</span> | — |
+| [`tools`](#config-and-knowledge) / [`flow`](#config-and-knowledge) / [`prompt`](#config-and-knowledge) | <span className="rg-badge rg-read">Read</span> | works offline |
+
 ## Contacts
 
-### `contacts search <query...>`
+### `contacts search`
+
+```text
+ringee contacts search <query...>
+```
 
 Search by name, phone, email or company.
 
@@ -27,11 +62,19 @@ ringee contacts search acme
 ringee contacts search "ada lovelace" --limit 5
 ```
 
-### `contacts get <contactId>`
+### `contacts get`
+
+```text
+ringee contacts get <contactId>
+```
 
 Full details for one contact, including recent calls, notes and meetings.
 
-### `contacts by-outcome <outcomes...>`
+### `contacts by-outcome`
+
+```text
+ringee contacts by-outcome <outcomes...>
+```
 
 Find contacts whose calls reached given outcomes — useful for deriving an ICP from closed business.
 
@@ -64,11 +107,21 @@ Valid outcomes: `meeting_booked`, `sale`, `interested`, `follow_up`, `callback_s
 ringee contacts create --phone +14155552671 --name "Ada Lovelace" --company "Babbage Engines"
 ```
 
-### `contacts update <contactId>`
+### `contacts update`
+
+```text
+ringee contacts update <contactId>
+```
 
 Accepts `--phone`, `--name`, `--first`, `--last`, `--email`, `--title`, `--company`. Only the flags you pass change.
 
-### `contacts delete <contactId>`
+### `contacts delete`
+
+```text
+ringee contacts delete <contactId>
+```
+
+<span className="rg-badge rg-destructive">Destructive</span>
 
 <Warning>
 **Destructive.** Requires both `--confirm-phone` matching the stored number **and** `--yes`.
@@ -104,7 +157,13 @@ Returns a `jobId` you pass to `reveal` and `import`.
 ringee leads search --title "VP Sales" --country US --industry Software
 ```
 
-### `leads reveal <jobId> <externalId>`
+### `leads reveal`
+
+```text
+ringee leads reveal <jobId> <externalId>
+```
+
+<span className="rg-badge rg-sensitive">Sensitive</span> <span className="rg-badge rg-neutral">Spends provider credits</span>
 
 Unlocks email — and optionally phone — and upserts a Ringee contact.
 
@@ -113,13 +172,19 @@ Unlocks email — and optionally phone — and upserts a Ringee contact.
 | `--phone` | Also reveal a mobile phone (extra provider credits) |
 | `-y, --yes` | **Required.** Confirms the credit spend |
 
-### `leads import <jobId> <externalIds...>`
+### `leads import`
+
+```text
+ringee leads import <jobId> <externalIds...>
+```
 
 Bulk-imports candidates as contacts, deduplicated by phone number. Does not reveal hidden emails or phones.
 
 ## Call sessions
 
 ### `sessions create`
+
+<span className="rg-badge rg-sensitive">Sensitive</span>
 
 Mints a magic link someone can open to dial through a queue without logging in.
 
@@ -140,11 +205,19 @@ ringee sessions create --contact <id> --contact <id> --title "Tue outbound" --ye
 The join URL is printed **once** and cannot be re-fetched. Share it only with someone authorized to call on the workspace's behalf.
 </Warning>
 
-### `sessions get <callSessionId>`
+### `sessions get`
+
+```text
+ringee sessions get <callSessionId>
+```
 
 Status and progress. Never prints the raw token.
 
-### `sessions update <callSessionId>`
+### `sessions update`
+
+```text
+ringee sessions update <callSessionId>
+```
 
 | Option | Description |
 |---|---|
@@ -152,7 +225,13 @@ Status and progress. Never prints the raw token.
 | `--campaign <campaignId>` | Set a campaign, or `null` to detach |
 | `--expires <minutes>` | Extend validity |
 
-### `sessions revoke <callSessionId>`
+### `sessions revoke`
+
+```text
+ringee sessions revoke <callSessionId>
+```
+
+<span className="rg-badge rg-destructive">Destructive</span>
 
 <Warning>
 **Destructive.** Requires `--yes`. The link stops working immediately; call history is preserved.
@@ -177,13 +256,21 @@ Full call detail, newest first.
 ringee calls list --outcome sale --from 2026-05-01T00:00:00Z --full
 ```
 
-### `outcomes log <callId> <outcome>`
+### `outcomes log`
+
+```text
+ringee outcomes log <callId> <outcome>
+```
 
 | Option | Description |
 |---|---|
 | `--note <note>` | Free-text follow-up note |
 
-### `callbacks create <contactId> <scheduledAt>`
+### `callbacks create`
+
+```text
+ringee callbacks create <contactId> <scheduledAt>
+```
 
 | Option | Description |
 |---|---|
@@ -194,7 +281,11 @@ ringee calls list --outcome sale --from 2026-05-01T00:00:00Z --full
 ringee callbacks create <contactId> 2026-05-24T10:00:00-04:00 --note "Asked for Monday"
 ```
 
-### `meetings schedule <contactId> <scheduledAt>`
+### `meetings schedule`
+
+```text
+ringee meetings schedule <contactId> <scheduledAt>
+```
 
 | Option | Description |
 |---|---|

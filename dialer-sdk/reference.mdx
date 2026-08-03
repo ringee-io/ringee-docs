@@ -48,16 +48,16 @@ Accepted by both `createFloating` and `createBar`.
 
 | Method / property | Floating | Bar | Description |
 |---|:---:|:---:|---|
-| `dialer` | Yes | Yes | Underlying headless instance |
-| `open()` | Yes | — | Open the panel |
-| `close()` | Yes | — | Close the panel |
-| `toggle()` | Yes | — | Toggle the panel |
-| `startCall(input)` | Yes | — | Open and queue or start a call |
-| `setContact(contact)` | Yes | Yes | Attach the current contact, or `null` to clear |
-| `prefill(number)` | Yes | Yes | Prefill the number |
-| `setTheme(theme)` | Yes | Yes | Update the theme |
-| `on(event, handler)` | Yes | Yes | Subscribe to a headless event |
-| `destroy()` | Yes | Yes | Remove the UI and its listeners |
+| `dialer` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Underlying headless instance |
+| `open()` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-neutral">n/a</span> | Open the panel |
+| `close()` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-neutral">n/a</span> | Close the panel |
+| `toggle()` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-neutral">n/a</span> | Toggle the panel |
+| `startCall(input)` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-neutral">n/a</span> | Open and queue or start a call |
+| `setContact(contact)` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Attach the current contact, or `null` to clear |
+| `prefill(number)` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Prefill the number |
+| `setTheme(theme)` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Update the theme |
+| `on(event, handler)` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Subscribe to a headless event |
+| `destroy()` | <span className="rg-badge rg-get">Yes</span> | <span className="rg-badge rg-get">Yes</span> | Remove the UI and its listeners |
 
 <Warning>
 `controller.destroy()` removes the visual surface only. To release WebRTC, audio and the call lock:

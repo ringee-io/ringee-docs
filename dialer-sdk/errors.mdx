@@ -72,18 +72,18 @@ These are decided server-side, on every call. A publishable key never grants cal
 
 ## Browser and network
 
-| Code | Meaning | Fix |
-|---|---|---|
-| `MICROPHONE_DENIED` | Permission refused or unavailable | Serve over HTTPS, allow the mic, add `allow="microphone"` to iframes |
-| `NO_AUDIO_DEVICE` | No usable input device | Ask the agent to connect a microphone |
-| `AUDIO_PLAYBACK_BLOCKED` | Autoplay policy blocked audio | Start calls from a real click or tap |
-| `TELNYX_CONNECTION_FAILED` | The provider connection dropped | Retryable |
-| `NETWORK_ERROR` | Request failed in transit | Retryable |
-| `TIMEOUT` | The operation exceeded its deadline | Retryable |
+| Code | Meaning | Fix | `retryable` |
+|---|---|---|---|
+| `MICROPHONE_DENIED` | Permission refused or unavailable | Serve over HTTPS, allow the mic, add `allow="microphone"` to iframes | <span className="rg-badge rg-destructive">No</span> |
+| `NO_AUDIO_DEVICE` | No usable input device | Ask the agent to connect a microphone | <span className="rg-badge rg-destructive">No</span> |
+| `AUDIO_PLAYBACK_BLOCKED` | Autoplay policy blocked audio | Start calls from a real click or tap | <span className="rg-badge rg-destructive">No</span> |
+| `TELNYX_CONNECTION_FAILED` | The provider connection dropped | Back off and retry | <span className="rg-badge rg-get">Yes</span> |
+| `NETWORK_ERROR` | Request failed in transit | Back off and retry | <span className="rg-badge rg-get">Yes</span> |
+| `TIMEOUT` | The operation exceeded its deadline | Back off and retry | <span className="rg-badge rg-get">Yes</span> |
 
 ## Retry policy
 
-`retryable` is `true` for known transient failures — rate limits, timeouts, network failures and provider connection failures.
+`retryable` is `true` for known transient failures — rate limits, timeouts, network failures and provider connection failures. Every other code in this page reports <span className="rg-badge rg-destructive">No</span>.
 
 <Warning>
 Never auto-retry permission, credit, Do Not Call or authentication errors. Retrying `INSUFFICIENT_CREDIT` or `DNC_BLOCKED` cannot succeed, and retrying auth errors can lock the agent out of the challenge.

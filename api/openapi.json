@@ -1,0 +1,814 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ringee Public API",
+    "version": "1.0.0",
+    "description": "The Custom Integrations API. Push contacts and companies from your CRM into Ringee, and open a secure dialer for a contact.\n\nAuthenticate every request with the `cik_live_` secret key of a Custom Integration. The key must never reach a browser.",
+    "contact": {
+      "name": "Ringee",
+      "url": "https://ringee.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.ringee.io",
+      "description": "Ringee Cloud"
+    },
+    {
+      "url": "{backendUrl}",
+      "description": "Self-hosted \u2014 your BACKEND_URL",
+      "variables": {
+        "backendUrl": {
+          "default": "https://ringee.example.com",
+          "description": "The BACKEND_URL of your deployment"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/api/integrations/custom/webhook": {
+      "post": {
+        "operationId": "receiveInboundEvent",
+        "summary": "Send an inbound event",
+        "description": "Upsert or archive a contact or company from your CRM.\n\nReturns **202 Accepted** for any well-formed, authenticated request. The real result is in the `status` field of the response body \u2014 always read it.",
+        "tags": [
+          "CRM to Ringee"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ContactUpserted"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompanyUpserted"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ContactDeleted"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompanyDeleted"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "event",
+                  "mapping": {
+                    "contact.upserted": "#/components/schemas/ContactUpserted",
+                    "company.upserted": "#/components/schemas/CompanyUpserted",
+                    "contact.deleted": "#/components/schemas/ContactDeleted",
+                    "company.deleted": "#/components/schemas/CompanyDeleted"
+                  }
+                }
+              },
+              "examples": {
+                "contact.upserted": {
+                  "summary": "Create or update a contact",
+                  "value": {
+                    "event": "contact.upserted",
+                    "eventId": "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T",
+                    "occurredAt": "2026-05-23T14:30:00.000Z",
+                    "data": {
+                      "externalId": "ext_contact_42",
+                      "phoneNumber": "+14155550123",
+                      "firstName": "Ada",
+                      "lastName": "Lovelace",
+                      "email": "ada@example.com",
+                      "companyExternalId": "ext_company_7",
+                      "jobTitle": "Founder",
+                      "ownerEmail": "rep@example.com",
+                      "customFields": {
+                        "tier": "vip"
+                      }
+                    }
+                  }
+                },
+                "company.upserted": {
+                  "summary": "Create or update a company",
+                  "value": {
+                    "event": "company.upserted",
+                    "eventId": "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA",
+                    "occurredAt": "2026-05-23T14:30:05.000Z",
+                    "data": {
+                      "externalId": "ext_company_7",
+                      "name": "Babbage Engines Ltd.",
+                      "domain": "babbage.example.com",
+                      "industry": "Hardware",
+                      "size": "11-50"
+                    }
+                  }
+                },
+                "contact.deleted": {
+                  "summary": "Archive a contact link",
+                  "value": {
+                    "event": "contact.deleted",
+                    "eventId": "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC",
+                    "occurredAt": "2026-05-23T14:35:00.000Z",
+                    "data": {
+                      "externalId": "ext_contact_42"
+                    }
+                  }
+                },
+                "company.deleted": {
+                  "summary": "Archive a company link",
+                  "value": {
+                    "event": "company.deleted",
+                    "eventId": "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K",
+                    "occurredAt": "2026-05-23T14:35:30.000Z",
+                    "data": {
+                      "externalId": "ext_company_7"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted. Check `status` in the body to know whether the event was applied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboundResult"
+                },
+                "examples": {
+                  "processed": {
+                    "summary": "Applied",
+                    "value": {
+                      "status": "processed",
+                      "eventId": "crm_9f1c2a7e"
+                    }
+                  },
+                  "skipped": {
+                    "summary": "Duplicate eventId \u2014 already applied",
+                    "value": {
+                      "status": "skipped",
+                      "eventId": "crm_9f1c2a7e",
+                      "message": "duplicate eventId"
+                    }
+                  },
+                  "failed": {
+                    "summary": "Accepted but could not be applied",
+                    "value": {
+                      "status": "failed",
+                      "eventId": "crm_9f1c2a7e",
+                      "message": "phoneNumber is required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not a JSON object, or a required envelope field is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unrecognised `X-Ringee-Api-Key`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/custom/click-to-call": {
+      "post": {
+        "operationId": "createClickToCallSession",
+        "summary": "Open a dialer for a contact",
+        "description": "Exchange a contact for a short-lived, signed dialer URL. Your agent opens that URL and Ringee handles caller ID selection, credit checks and the WebRTC call.\n\nSend at least one of `contactExternalId` (linked to a contact that has a phone number) or `phoneNumber`.",
+        "tags": [
+          "CRM to Ringee"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClickToCallRequest"
+              },
+              "examples": {
+                "byContact": {
+                  "summary": "By synced CRM contact",
+                  "value": {
+                    "contactExternalId": "ext_contact_42",
+                    "agentEmail": "rep@example.com"
+                  }
+                },
+                "byNumber": {
+                  "summary": "By raw phone number",
+                  "value": {
+                    "phoneNumber": "+14155550123",
+                    "agentEmail": "rep@example.com",
+                    "fromNumber": "+14155550100"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "A dialer session was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClickToCallResult"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "Dialer session created",
+                    "value": {
+                      "contactId": "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55",
+                      "agentUserId": "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0",
+                      "toNumber": "+14155550123",
+                      "fromNumber": "+14155550100",
+                      "dialerUrl": "https://app.ringee.io/dashboard/dialer?session=eyJhbGciOi...&to=%2B14155550123&from=%2B14155550100",
+                      "sessionToken": "eyJhbGciOi...",
+                      "expiresAt": "2026-05-23T14:35:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Neither `contactExternalId` (linked to a contact) nor `phoneNumber` was provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Ringee-Api-Key`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`agentEmail` is missing on an organization workspace, no member matched the email, or no caller ID is available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Ringee-Api-Key",
+        "description": "The `cik_live_` secret key of a Custom Integration. Shown once at creation. Server-side only."
+      }
+    },
+    "schemas": {
+      "ContactUpserted": {
+        "type": "object",
+        "title": "contact.upserted",
+        "description": "Create or update a contact from your CRM's current state.",
+        "required": [
+          "event",
+          "eventId",
+          "occurredAt",
+          "data"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "contact.upserted",
+            "description": "The event type."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Unique, stable id for this event. Ringee deduplicates on it.",
+            "examples": [
+              "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T"
+            ],
+            "example": "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the change happened in your system.",
+            "examples": [
+              "2026-05-23T14:30:00.000Z"
+            ],
+            "example": "2026-05-23T14:30:00.000Z"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "externalId",
+              "phoneNumber"
+            ],
+            "description": "Omit a field to leave it untouched. Sending `null`, `undefined` or an empty string does not overwrite an existing value.",
+            "properties": {
+              "externalId": {
+                "type": "string",
+                "description": "Stable id of the contact in your system. This is the join key for every later event.",
+                "examples": [
+                  "ext_contact_42"
+                ],
+                "example": "ext_contact_42"
+              },
+              "phoneNumber": {
+                "type": "string",
+                "description": "Phone in any format; normalized to E.164 when possible. Required because Ringee must be able to dial the contact.",
+                "examples": [
+                  "+14155550123"
+                ],
+                "example": "+14155550123"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "Given name.",
+                "examples": [
+                  "Ada"
+                ],
+                "example": "Ada"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "Family name.",
+                "examples": [
+                  "Lovelace"
+                ],
+                "example": "Lovelace"
+              },
+              "fullName": {
+                "type": "string",
+                "description": "Pre-composed full name."
+              },
+              "name": {
+                "type": "string",
+                "description": "Display name."
+              },
+              "email": {
+                "type": "string",
+                "description": "Primary email.",
+                "examples": [
+                  "ada@example.com"
+                ],
+                "example": "ada@example.com"
+              },
+              "companyExternalId": {
+                "type": "string",
+                "description": "External company id to link this contact to.",
+                "examples": [
+                  "ext_company_7"
+                ],
+                "example": "ext_company_7"
+              },
+              "companyName": {
+                "type": "string",
+                "description": "Fallback company name when no `companyExternalId` is provided."
+              },
+              "jobTitle": {
+                "type": "string",
+                "description": "Position or title.",
+                "examples": [
+                  "Founder"
+                ],
+                "example": "Founder"
+              },
+              "ownerExternalId": {
+                "type": "string",
+                "description": "External owner id (sales rep)."
+              },
+              "ownerEmail": {
+                "type": "string",
+                "description": "Owner email \u2014 resolves to a Ringee user when the integration is organization-scoped.",
+                "examples": [
+                  "rep@example.com"
+                ],
+                "example": "rep@example.com"
+              },
+              "source": {
+                "type": "string",
+                "description": "Lead source label."
+              },
+              "customFields": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Arbitrary key/value pairs stored on the contact."
+              },
+              "crmMetadata": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Provider-specific metadata stored on the contact."
+              }
+            }
+          }
+        }
+      },
+      "CompanyUpserted": {
+        "type": "object",
+        "title": "company.upserted",
+        "description": "Create or update a company. Deduplicated on `externalId`, then `domain`.",
+        "required": [
+          "event",
+          "eventId",
+          "occurredAt",
+          "data"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "company.upserted",
+            "description": "The event type."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Unique, stable id for this event.",
+            "examples": [
+              "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA"
+            ],
+            "example": "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "examples": [
+              "2026-05-23T14:30:05.000Z"
+            ],
+            "example": "2026-05-23T14:30:05.000Z"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "externalId",
+              "name"
+            ],
+            "properties": {
+              "externalId": {
+                "type": "string",
+                "description": "Stable id of the company in your system.",
+                "examples": [
+                  "ext_company_7"
+                ],
+                "example": "ext_company_7"
+              },
+              "name": {
+                "type": "string",
+                "description": "Display name.",
+                "examples": [
+                  "Babbage Engines Ltd."
+                ],
+                "example": "Babbage Engines Ltd."
+              },
+              "legalName": {
+                "type": "string",
+                "description": "Registered legal name."
+              },
+              "domain": {
+                "type": "string",
+                "description": "Primary web domain \u2014 used as a secondary dedup signal.",
+                "examples": [
+                  "babbage.example.com"
+                ],
+                "example": "babbage.example.com"
+              },
+              "industry": {
+                "type": "string",
+                "description": "Industry label.",
+                "examples": [
+                  "Hardware"
+                ],
+                "example": "Hardware"
+              },
+              "size": {
+                "type": "string",
+                "description": "Headcount band.",
+                "examples": [
+                  "11-50"
+                ],
+                "example": "11-50"
+              },
+              "phone": {
+                "type": "string",
+                "description": "Main phone."
+              },
+              "website": {
+                "type": "string",
+                "description": "Homepage URL."
+              },
+              "source": {
+                "type": "string",
+                "description": "Source label."
+              },
+              "customFields": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Arbitrary key/value pairs."
+              },
+              "crmMetadata": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Provider-specific metadata."
+              }
+            }
+          }
+        }
+      },
+      "ContactDeleted": {
+        "type": "object",
+        "title": "contact.deleted",
+        "description": "Archives the integration's link to the contact. Ringee never deletes the underlying contact \u2014 call history, notes, callbacks and meetings are preserved.",
+        "required": [
+          "event",
+          "eventId",
+          "occurredAt",
+          "data"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "contact.deleted",
+            "description": "The event type."
+          },
+          "eventId": {
+            "type": "string",
+            "examples": [
+              "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC"
+            ],
+            "example": "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "examples": [
+              "2026-05-23T14:35:00.000Z"
+            ],
+            "example": "2026-05-23T14:35:00.000Z"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "externalId"
+            ],
+            "properties": {
+              "externalId": {
+                "type": "string",
+                "description": "The external contact id you previously sent in `contact.upserted`.",
+                "examples": [
+                  "ext_contact_42"
+                ],
+                "example": "ext_contact_42"
+              }
+            }
+          }
+        }
+      },
+      "CompanyDeleted": {
+        "type": "object",
+        "title": "company.deleted",
+        "description": "Archives the integration's link to the company.",
+        "required": [
+          "event",
+          "eventId",
+          "occurredAt",
+          "data"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "company.deleted",
+            "description": "The event type."
+          },
+          "eventId": {
+            "type": "string",
+            "examples": [
+              "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K"
+            ],
+            "example": "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "examples": [
+              "2026-05-23T14:35:30.000Z"
+            ],
+            "example": "2026-05-23T14:35:30.000Z"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "externalId"
+            ],
+            "properties": {
+              "externalId": {
+                "type": "string",
+                "description": "The external company id you previously sent in `company.upserted`.",
+                "examples": [
+                  "ext_company_7"
+                ],
+                "example": "ext_company_7"
+              }
+            }
+          }
+        }
+      },
+      "InboundResult": {
+        "type": "object",
+        "required": [
+          "status",
+          "eventId"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed",
+              "skipped",
+              "failed"
+            ],
+            "description": "`processed` \u2014 applied. `skipped` \u2014 duplicate `eventId`, already applied earlier; treat as success. `failed` \u2014 accepted but could not be applied; fix and resend with a **new** `eventId`."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Echoes the `eventId` you sent."
+          },
+          "message": {
+            "type": "string",
+            "description": "Present on `skipped` and `failed`. Surface it in your sync logs."
+          }
+        }
+      },
+      "ClickToCallRequest": {
+        "type": "object",
+        "properties": {
+          "contactExternalId": {
+            "type": "string",
+            "description": "The contact's id in your CRM. Resolves to a Ringee contact if you previously synced it with `contact.upserted`.",
+            "examples": [
+              "ext_contact_42"
+            ],
+            "example": "ext_contact_42"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Destination number. Required unless `contactExternalId` resolves to a contact that already has one.",
+            "examples": [
+              "+14155550123"
+            ],
+            "example": "+14155550123"
+          },
+          "agentEmail": {
+            "type": "string",
+            "description": "Email of the Ringee user who will place the call. **Required for organization workspaces.** Take it from your authenticated session, never from a value the browser sent.",
+            "examples": [
+              "rep@example.com"
+            ],
+            "example": "rep@example.com"
+          },
+          "fromNumber": {
+            "type": "string",
+            "description": "Caller ID to use. Defaults to the agent's first active verified caller ID, then any purchased number on the workspace.",
+            "examples": [
+              "+14155550100"
+            ],
+            "example": "+14155550100"
+          },
+          "ownerEmail": {
+            "type": "string",
+            "description": "Alias for `agentEmail`, used when your CRM models this as a record owner."
+          },
+          "ownerExternalId": {
+            "type": "string",
+            "description": "Accepted but not yet wired to a resolution strategy. Sending it without `agentEmail` returns 422 \u2014 use `agentEmail`."
+          }
+        }
+      },
+      "ClickToCallResult": {
+        "type": "object",
+        "required": [
+          "contactId",
+          "agentUserId",
+          "toNumber",
+          "fromNumber",
+          "dialerUrl",
+          "sessionToken",
+          "expiresAt"
+        ],
+        "properties": {
+          "contactId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Ringee contact, when `contactExternalId` resolved to one. `null` otherwise.",
+            "examples": [
+              "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55"
+            ],
+            "example": "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55"
+          },
+          "agentUserId": {
+            "type": "string",
+            "description": "The Ringee user who will place the call.",
+            "examples": [
+              "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0"
+            ],
+            "example": "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0"
+          },
+          "toNumber": {
+            "type": "string",
+            "description": "Normalized destination in E.164.",
+            "examples": [
+              "+14155550123"
+            ],
+            "example": "+14155550123"
+          },
+          "fromNumber": {
+            "type": "string",
+            "description": "The caller ID Ringee selected.",
+            "examples": [
+              "+14155550100"
+            ],
+            "example": "+14155550100"
+          },
+          "dialerUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL to open. Valid for **5 minutes**.",
+            "examples": [
+              "https://app.ringee.io/dashboard/dialer?session=eyJhbGciOi...&to=%2B14155550123&from=%2B14155550100"
+            ],
+            "example": "https://app.ringee.io/dashboard/dialer?session=eyJhbGciOi...&to=%2B14155550123&from=%2B14155550100"
+          },
+          "sessionToken": {
+            "type": "string",
+            "description": "The signed session, already embedded in `dialerUrl`. Never return it to the browser, persist it, or write it to logs \u2014 it authorizes a call on the agent's behalf."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Expiry of the dialer session.",
+            "examples": [
+              "2026-05-23T14:35:00.000Z"
+            ],
+            "example": "2026-05-23T14:35:00.000Z"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "examples": [
+              400
+            ],
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "description": "What went wrong.",
+            "examples": [
+              "Must provide either contactExternalId (linked to a contact) or phoneNumber"
+            ],
+            "example": "Must provide either contactExternalId (linked to a contact) or phoneNumber"
+          },
+          "error": {
+            "type": "string",
+            "examples": [
+              "Bad Request"
+            ],
+            "example": "Bad Request"
+          }
+        }
+      }
+    }
+  }
+}

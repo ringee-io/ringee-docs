@@ -1,80 +1,14 @@
 ---
 title: Click-to-call
 description: 'Open a secure Ringee dialer for a contact from your CRM'
+openapi: 'POST /api/integrations/custom/click-to-call'
 ---
 
 Click-to-call exchanges a contact for a **short-lived, signed dialer URL**. Your agent opens that URL and Ringee handles caller ID selection, credit checks and the WebRTC call.
 
-```http
-POST /api/integrations/custom/click-to-call
-Content-Type: application/json
-X-Ringee-Api-Key: cik_live_…
-```
-
 <Info>
 Click-to-call is the fastest way to add calling to an existing CRM: one server-side request, one redirect, no frontend SDK. If you want the dialer to live **inside** your own UI instead of a Ringee tab, use the [Dialer SDK](/dialer-sdk/overview).
 </Info>
-
-## Request
-
-<ParamField body="contactExternalId" type="string">
-  The contact's id in your CRM. Resolves to a Ringee contact if you previously synced it with [`contact.upserted`](/api/inbound-events#contact-upserted).
-</ParamField>
-
-<ParamField body="phoneNumber" type="string">
-  Destination number. Required unless `contactExternalId` resolves to a contact that already has one.
-</ParamField>
-
-<ParamField body="agentEmail" type="string">
-  Email of the Ringee user who will place the call. **Required for organization workspaces.**
-</ParamField>
-
-<ParamField body="fromNumber" type="string">
-  Caller ID to use. Defaults to the agent's first active verified caller ID, then any purchased number on the workspace.
-</ParamField>
-
-<ParamField body="ownerEmail" type="string">
-  Alias for `agentEmail`, used when your CRM models this as a record owner.
-</ParamField>
-
-```bash
-curl -X POST https://api.ringee.io/api/integrations/custom/click-to-call \
-  -H "Content-Type: application/json" \
-  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…" \
-  -d '{
-    "contactExternalId": "ext_contact_42",
-    "phoneNumber": "+14155550123",
-    "agentEmail": "rep@example.com"
-  }'
-```
-
-You must send at least one of `contactExternalId` (linked to a contact with a phone) or `phoneNumber`.
-
-## Response
-
-```json
-{
-  "contactId": "6b2f…",
-  "agentUserId": "a91c…",
-  "toNumber": "+14155550123",
-  "fromNumber": "+14155550100",
-  "dialerUrl": "https://app.ringee.io/dashboard/dialer?session=…&to=…&from=…",
-  "sessionToken": "…",
-  "expiresAt": "2026-05-23T14:35:00.000Z"
-}
-```
-
-<ResponseField name="dialerUrl" type="string">
-  The URL to open. Valid for **5 minutes**.
-</ResponseField>
-
-<ResponseField name="sessionToken" type="string">
-  The signed session, already embedded in `dialerUrl`.
-</ResponseField>
-
-<ResponseField name="expiresAt" type="string (ISO-8601)">
-  Expiry of the dialer session.
-</ResponseField>
 
 <Warning>
 Your frontend only needs `dialerUrl` and `expiresAt`. Never return `sessionToken` to the browser, never persist it, and never write it to logs — it authorizes a call on the agent's behalf.
@@ -85,7 +19,7 @@ Your frontend only needs `dialerUrl` and `expiresAt`. Never return `sessionToken
 | Workspace | Behavior |
 |---|---|
 | Personal | The workspace owner always places the call. `agentEmail` is ignored. |
-| Organization | `agentEmail` (or `ownerEmail`) must match a member of that organization, or the request fails with `422`. |
+| Organization | `agentEmail` (or `ownerEmail`) must match a member of that organization, or the request fails with <span className="rg-badge rg-sensitive">422</span>. |
 
 <Warning>
 Take `agentEmail` from your **authenticated session**, not from a value the browser sent. Otherwise any user could place calls as any colleague.
@@ -150,9 +84,9 @@ Do not request a dialer URL on page load. Calls must start from a real click.
 
 | Status | Cause |
 |---|---|
-| `400` | Neither `contactExternalId` (linked to a contact) nor `phoneNumber` was provided. |
-| `401` | Missing or invalid `X-Ringee-Api-Key`. |
-| `422` | `agentEmail` missing on an organization workspace, no member matched the email, or no caller ID is available. |
+| <span className="rg-badge rg-sensitive">400</span> | Neither `contactExternalId` (linked to a contact) nor `phoneNumber` was provided. |
+| <span className="rg-badge rg-destructive">401</span> | Missing or invalid `X-Ringee-Api-Key`. |
+| <span className="rg-badge rg-sensitive">422</span> | `agentEmail` missing on an organization workspace, no member matched the email, or no caller ID is available. |
 
 ## Next steps
 

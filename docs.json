@@ -3,18 +3,43 @@
   "theme": "maple",
   "name": "Ringee Documentation",
   "colors": {
-    "primary": "#737373",
-    "light": "#737373",
-    "dark": "#737373"
+    "primary": "#059669",
+    "light": "#34D399",
+    "dark": "#047857"
   },
   "favicon": "/favicon.ico",
+  "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": {
+      "theme": {
+        "light": "github-light",
+        "dark": "github-dark-dimmed"
+      }
+    }
+  },
+  "api": {
+    "openapi": "api/openapi.json",
+    "params": {
+      "expanded": "all"
+    },
+    "playground": {
+      "display": "simple"
+    },
+    "examples": {
+      "languages": ["curl", "javascript", "python", "php", "go"],
+      "defaults": "required"
+    },
+    "url": "full"
+  },
   "navigation": {
     "tabs": [
       {
         "tab": "Documentation",
+        "icon": "book-open",
         "groups": [
           {
             "group": "Getting Started",
+            "icon": "rocket",
             "pages": [
               "introduction",
               "howitworks",
@@ -24,6 +49,7 @@
           },
           {
             "group": "Installation",
+            "icon": "download",
             "pages": [
               "installation/docker-compose",
               "installation/docker",
@@ -32,6 +58,7 @@
           },
           {
             "group": "Configuration",
+            "icon": "gear",
             "pages": [
               "configuration/reference",
               "configuration/docker-compose",
@@ -43,6 +70,7 @@
           },
           {
             "group": "Telephony Providers",
+            "icon": "tower-broadcast",
             "pages": [
               "providers/overview",
               "providers/add-provider",
@@ -53,9 +81,11 @@
       },
       {
         "tab": "Public API",
+        "icon": "code",
         "groups": [
           {
             "group": "Get Started",
+            "icon": "key",
             "pages": [
               "api/overview",
               "api/authentication"
@@ -63,6 +93,7 @@
           },
           {
             "group": "CRM to Ringee",
+            "icon": "arrow-right-to-bracket",
             "pages": [
               "api/inbound-events",
               "api/click-to-call"
@@ -70,6 +101,7 @@
           },
           {
             "group": "Ringee to CRM",
+            "icon": "arrow-right-from-bracket",
             "pages": [
               "api/outbound-webhooks",
               "api/events-reference"
@@ -77,6 +109,7 @@
           },
           {
             "group": "Guides",
+            "icon": "book",
             "pages": [
               "api/build-an-integration",
               "api/logs-and-errors"
@@ -86,9 +119,11 @@
       },
       {
         "tab": "MCP",
+        "icon": "robot",
         "groups": [
           {
             "group": "Get Started",
+            "icon": "plug",
             "pages": [
               "mcp/overview",
               "mcp/connect"
@@ -96,6 +131,7 @@
           },
           {
             "group": "Reference",
+            "icon": "list",
             "pages": [
               "mcp/tools",
               "mcp/workspaces",
@@ -104,6 +140,7 @@
           },
           {
             "group": "Apps",
+            "icon": "puzzle-piece",
             "pages": [
               "mcp/apps"
             ]
@@ -112,9 +149,11 @@
       },
       {
         "tab": "CLI",
+        "icon": "terminal",
         "groups": [
           {
             "group": "Get Started",
+            "icon": "rocket",
             "pages": [
               "cli/overview",
               "cli/configuration"
@@ -122,6 +161,7 @@
           },
           {
             "group": "Reference",
+            "icon": "list",
             "pages": [
               "cli/commands",
               "cli/agents"
@@ -131,9 +171,11 @@
       },
       {
         "tab": "Dialer SDK",
+        "icon": "phone",
         "groups": [
           {
             "group": "Get Started",
+            "icon": "rocket",
             "pages": [
               "dialer-sdk/overview",
               "dialer-sdk/quickstart",
@@ -142,6 +184,7 @@
           },
           {
             "group": "Integration Modes",
+            "icon": "layer-group",
             "pages": [
               "dialer-sdk/floating",
               "dialer-sdk/bar",
@@ -150,6 +193,7 @@
           },
           {
             "group": "Guides",
+            "icon": "book",
             "pages": [
               "dialer-sdk/react",
               "dialer-sdk/contacts",
@@ -158,6 +202,7 @@
           },
           {
             "group": "Reference",
+            "icon": "code",
             "pages": [
               "dialer-sdk/reference",
               "dialer-sdk/errors"
@@ -165,6 +210,7 @@
           },
           {
             "group": "Operations",
+            "icon": "shield-halved",
             "pages": [
               "dialer-sdk/security",
               "dialer-sdk/troubleshooting"
