@@ -35,9 +35,9 @@ Make and receive crystal-clear calls to **180+ countries**, manage contacts, rec
 | Layer | Technology |
 |---|---|
 | **Monorepo** | pnpm workspaces |
-| **Frontend** | Next.js (React) — B2B admin + B2C consumer apps |
+| **Frontend** | Next.js 15 (React 19, App Router) |
 | **Backend** | NestJS (REST & Webhooks) |
-| **Worker** | NestJS background job processor |
+| **Orchestrator** | Temporal worker for durable background jobs |
 | **Database** | PostgreSQL with Prisma ORM |
 | **Cache** | Redis |
 | **Telephony** | Telnyx WebRTC |
@@ -58,5 +58,25 @@ Perfect for building your own:
 
 <Info>
 At the moment there is no difference between the hosted version and the self-hosted version.
-Built for automation — integrate with your existing tools via the REST API.
 </Info>
+
+## Build on Ringee
+
+Ringee is designed to be embedded, automated and driven by agents.
+
+<CardGroup cols={2}>
+  <Card title="Public API" icon="webhook" href="/api/overview">
+    Sync any CRM and receive call activity through signed webhooks
+  </Card>
+  <Card title="Dialer SDK" icon="phone" href="/dialer-sdk/overview">
+    Embed a real dialer inside your own web app
+  </Card>
+  <Card title="MCP" icon="robot" href="/mcp/overview">
+    Let Claude or ChatGPT operate Ringee on your behalf
+  </Card>
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    Run Ringee from the terminal or any agent harness
+  </Card>
+</CardGroup>
+
+Not sure which one you need? See [Ways to build on Ringee](/build-on-ringee).

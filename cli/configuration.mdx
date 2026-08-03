@@ -1,0 +1,112 @@
+---
+title: Configuration
+description: 'Point the ringee CLI at your workspace'
+---
+
+The CLI connects to the Ringee MCP server. It needs one thing: the URL of that server for your workspace.
+
+## Get your connection details
+
+From the dashboard, open **Settings → MCP / Integrations**, or call the API while signed in:
+
+```http
+GET /api/mcp/connection-info
+```
+
+```json
+{
+  "mode": "freelancer",
+  "userId": "a91c…",
+  "organizationId": null,
+  "url": "https://api.ringee.io/api/mcp/a91c…/sse"
+}
+```
+
+## Environment variables
+
+<ParamField body="RINGEE_MCP_URL" type="string">
+  The full SSE URL. **Preferred** — takes precedence over everything else.
+</ParamField>
+
+<ParamField body="RINGEE_BACKEND_URL" type="string">
+  Your Ringee API base URL. Used together with `RINGEE_USER_ID` when `RINGEE_MCP_URL` is not set.
+</ParamField>
+
+<ParamField body="RINGEE_USER_ID" type="string">
+  Your Ringee user UUID.
+</ParamField>
+
+<ParamField body="RINGEE_ORG_ID" type="string">
+  Organization UUID, to start in an organization workspace instead of your personal one.
+</ParamField>
+
+<ParamField body="RINGEE_API_KEY" type="string">
+  Optional bearer token sent as an `Authorization` header.
+</ParamField>
+
+<CodeGroup>
+
+```bash Full URL (preferred)
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/sse"
+```
+
+```bash Organization workspace
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/<organizationId>/sse"
+```
+
+```bash Built from parts
+export RINGEE_BACKEND_URL="https://api.ringee.io"
+export RINGEE_USER_ID="<userId>"
+export RINGEE_ORG_ID="<organizationId>"   # optional
+```
+
+```bash Self-hosted
+export RINGEE_BACKEND_URL="https://ringee-api.example.com"
+export RINGEE_USER_ID="<userId>"
+```
+
+</CodeGroup>
+
+<Note>
+`RINGEE_BACKEND_URL` tolerates a trailing `/api` — the CLI strips it before building the path, so both `https://api.ringee.io` and `https://api.ringee.io/api` work.
+</Note>
+
+<Warning>
+The MCP URL is a credential for that workspace. Keep it in your shell profile or secret manager, not in a committed `.env` or a shared script.
+</Warning>
+
+## Verify
+
+```bash
+ringee config show    # resolved connection, token masked
+ringee config check   # connect and list every tool the server exposes
+```
+
+`config check` is the fastest way to answer "is my Ringee connection working?" — if it prints tools, every other command will work, and so will any MCP client pointed at the same URL.
+
+## Choosing a workspace
+
+The URL sets your starting workspace, but it is not a lock. Anything that changes the active workspace — the dashboard switcher, an assistant calling `switch_workspace` — applies to the CLI too, because the active workspace is stored server-side.
+
+<Tip>
+Seeing results you did not expect? Your active workspace has probably changed. See [Workspaces](/mcp/workspaces).
+</Tip>
+
+## Errors
+
+| Message | Fix |
+|---|---|
+| `Missing Ringee connection config` | Set `RINGEE_MCP_URL`, or `RINGEE_BACKEND_URL` **and** `RINGEE_USER_ID`. |
+| Connection refused or timeout | Confirm the backend is reachable from this machine and the URL includes `/api/mcp/…/sse`. |
+| Empty tool list from `config check` | The URL resolved but the ids do not match a real user or organization. Re-run `GET /api/mcp/connection-info`. |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Command reference" icon="terminal" href="/cli/commands">
+    Every command, argument and flag
+  </Card>
+  <Card title="Use it from an agent" icon="robot" href="/cli/agents">
+    Give a shell-capable agent access to Ringee
+  </Card>
+</CardGroup>

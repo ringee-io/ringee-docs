@@ -1,0 +1,126 @@
+---
+title: Errors
+description: 'Every RingeeError code and how to react to it'
+---
+
+Rejected promises throw a `RingeeError` carrying a stable `code`, a human-readable `message`, and a `retryable` flag.
+
+```ts
+import { RingeeError } from "@ringee/dialer-sdk";
+
+try {
+  await dialer.call({ to: "+13055550198" });
+} catch (error) {
+  if (error instanceof RingeeError) {
+    console.log(error.code);
+    console.log(error.message);
+    console.log(error.retryable);
+  }
+}
+```
+
+The bundled UIs already translate these codes into actionable messages. In [Headless](/dialer-sdk/headless), that mapping is yours.
+
+## Installation
+
+Something is wrong with the key or the origin. These are configuration problems, not runtime ones — fail loudly during development.
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `INVALID_PUBLISHABLE_KEY` | Malformed key, deleted integration, or the secret API key was rotated | Generate a new publishable key |
+| `DOMAIN_NOT_ALLOWED` | `window.location.origin` is not in the key's allowed origins | Add the exact origin and generate a new key |
+| `INTEGRATION_DISABLED` | The Custom Integration is not active | Re-enable it in the dashboard |
+
+See [Publishable keys](/dialer-sdk/publishable-keys).
+
+## Authentication
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `INVALID_EMAIL` | The address is not well-formed | Validate before submitting |
+| `INVALID_EMAIL_CODE` | Wrong code | Let the agent retry |
+| `EMAIL_CHALLENGE_EXPIRED` | The challenge timed out | Request a new code |
+| `EMAIL_CODE_ATTEMPTS_EXCEEDED` | Too many wrong attempts | Start a new challenge |
+| `AUTH_REQUIRED` | No authenticated agent | Run the OTP flow, then wait for `ready` |
+| `SESSION_EXPIRED` | The stored session is no longer valid | Re-authenticate |
+
+## Permissions
+
+| Code | Meaning |
+|---|---|
+| `AGENT_NOT_ALLOWED` | This agent may not use this installation |
+| `AGENT_NOT_IN_WORKSPACE` | The agent is not a member of the integration's workspace |
+| `USER_BLOCKED` | The account is blocked |
+| `CALLING_DISABLED` | Calling is disabled for this workspace or user |
+
+<Note>
+These are decided server-side, on every call. A publishable key never grants calling rights on its own.
+</Note>
+
+## Calls
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `INVALID_PHONE_NUMBER` | Not valid E.164 | Send `+`, country code, number, no extension |
+| `NO_CALLER_ID` | No caller ID available to this agent | Add or verify one in Ringee |
+| `CALLER_ID_NOT_ALLOWED` | The requested `callerIdId` is not permitted | Use one from `getCallerIds()` |
+| `INSUFFICIENT_CREDIT` | Not enough balance | Top up the workspace |
+| `DNC_BLOCKED` | The destination is on the Do Not Call list | Do not retry; disable the call button |
+| `CALL_ALREADY_ACTIVE` | A call exists in this instance or another tab | End it first |
+| `NO_ACTIVE_CALL` | A control method ran with no call in progress | Guard on `getActiveCall()` |
+| `CALL_FAILED` | The call could not be completed | Show the message; the reason varies by carrier |
+
+## Browser and network
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `MICROPHONE_DENIED` | Permission refused or unavailable | Serve over HTTPS, allow the mic, add `allow="microphone"` to iframes |
+| `NO_AUDIO_DEVICE` | No usable input device | Ask the agent to connect a microphone |
+| `AUDIO_PLAYBACK_BLOCKED` | Autoplay policy blocked audio | Start calls from a real click or tap |
+| `TELNYX_CONNECTION_FAILED` | The provider connection dropped | Retryable |
+| `NETWORK_ERROR` | Request failed in transit | Retryable |
+| `TIMEOUT` | The operation exceeded its deadline | Retryable |
+
+## Retry policy
+
+`retryable` is `true` for known transient failures — rate limits, timeouts, network failures and provider connection failures.
+
+<Warning>
+Never auto-retry permission, credit, Do Not Call or authentication errors. Retrying `INSUFFICIENT_CREDIT` or `DNC_BLOCKED` cannot succeed, and retrying auth errors can lock the agent out of the challenge.
+</Warning>
+
+```ts
+async function callWithRetry(input, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await dialer.call(input);
+    } catch (error) {
+      const last = i === attempts - 1;
+      if (!(error instanceof RingeeError) || !error.retryable || last) throw error;
+      await new Promise((r) => setTimeout(r, 2 ** i * 500));
+    }
+  }
+}
+```
+
+## Where errors surface
+
+| Channel | When |
+|---|---|
+| Rejected promise | The method you awaited failed |
+| `failed` event | Authorization or the call itself failed, with `{ call, error }` |
+| `error` event | A typed general error occurred outside a call |
+| `onError` option | Convenience hook on the UI controllers |
+
+Subscribe **before** `initialize()` so errors raised during startup are not missed.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="bug" href="/dialer-sdk/troubleshooting">
+    Symptom-first fixes for the common cases
+  </Card>
+  <Card title="Security" icon="shield-check" href="/dialer-sdk/security">
+    CSP, microphone and iframe requirements
+  </Card>
+</CardGroup>

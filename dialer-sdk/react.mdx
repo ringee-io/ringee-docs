@@ -1,0 +1,218 @@
+---
+title: React and Next.js
+description: 'Mount the browser SDK safely in a component tree'
+---
+
+There is no separate React wrapper package. Mount the SDK after the DOM exists and destroy it when the component unmounts.
+
+<Warning>
+The SDK is browser-only. In Next.js, use a **dynamic import inside `useEffect`** so the package never runs during SSR or in a Server Component.
+</Warning>
+
+## Floating
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { FloatingController } from "@ringee/dialer-sdk/ui";
+
+export function RingeeDialer({ email }: { email: string }) {
+  const controller = useRef<FloatingController | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void import("@ringee/dialer-sdk/ui").then(({ createFloating }) => {
+      if (cancelled) return;
+
+      controller.current = createFloating({
+        key: process.env.NEXT_PUBLIC_RINGEE_KEY!,
+        agentEmail: email,
+        locale: "en",
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      const current = controller.current;
+      controller.current = null;
+      if (!current) return;
+
+      current.destroy();
+      void current.dialer.destroy();
+    };
+  }, [email]);
+
+  return null;
+}
+```
+
+The `cancelled` flag matters: React 18 Strict Mode runs effects twice in development, and the dynamic import can resolve after the first cleanup.
+
+## Bar
+
+Render the container first, then create the controller.
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+
+export function RingeeBar() {
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!container.current) return;
+
+    let mounted = true;
+    let cleanup: (() => void) | undefined;
+
+    void import("@ringee/dialer-sdk/ui").then(({ createBar }) => {
+      if (!mounted || !container.current) return;
+
+      const bar = createBar({
+        key: process.env.NEXT_PUBLIC_RINGEE_KEY!,
+        container: container.current,
+      });
+
+      cleanup = () => {
+        bar.destroy();
+        void bar.dialer.destroy();
+      };
+    });
+
+    return () => {
+      mounted = false;
+      cleanup?.();
+    };
+  }, []);
+
+  return <div ref={container} />;
+}
+```
+
+## Expose the controller to the rest of your app
+
+Keep one instance in context so any component can start a call.
+
+```tsx
+"use client";
+
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { FloatingController } from "@ringee/dialer-sdk/ui";
+
+const RingeeContext = createContext<FloatingController | null>(null);
+
+export function RingeeProvider({
+  email,
+  children,
+}: {
+  email: string;
+  children: React.ReactNode;
+}) {
+  const [controller, setController] = useState<FloatingController | null>(null);
+  const ref = useRef<FloatingController | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void import("@ringee/dialer-sdk/ui").then(({ createFloating }) => {
+      if (cancelled) return;
+      const instance = createFloating({
+        key: process.env.NEXT_PUBLIC_RINGEE_KEY!,
+        agentEmail: email,
+      });
+      ref.current = instance;
+      setController(instance);
+    });
+
+    return () => {
+      cancelled = true;
+      const current = ref.current;
+      ref.current = null;
+      setController(null);
+      if (!current) return;
+      current.destroy();
+      void current.dialer.destroy();
+    };
+  }, [email]);
+
+  return (
+    <RingeeContext.Provider value={controller}>{children}</RingeeContext.Provider>
+  );
+}
+
+export const useRingee = () => useContext(RingeeContext);
+```
+
+Then anywhere:
+
+```tsx
+function CallButton({ contact }) {
+  const ringee = useRingee();
+
+  return (
+    <button
+      disabled={!ringee}
+      onClick={() =>
+        ringee?.startCall({
+          to: contact.phone,
+          name: contact.fullName,
+          externalContactId: contact.id,
+        })
+      }
+    >
+      Call
+    </button>
+  );
+}
+```
+
+`startCall()` is safe before the dialer is ready — it queues the request and places it once initialization finishes.
+
+## Keep the contact in sync
+
+```tsx
+useEffect(() => {
+  if (!ringee || !contact) return;
+  ringee.setContact({
+    name: contact.fullName,
+    number: contact.phone,
+    imageUrl: contact.avatarUrl,
+    externalContactId: contact.id,
+  });
+}, [ringee, contact]);
+```
+
+## Environment variables
+
+The publishable key is browser-safe, so a public env var is correct:
+
+```bash
+NEXT_PUBLIC_RINGEE_KEY="pk_live_xxxxx"
+```
+
+<Warning>
+Never put a `cik_live_…` API key or a webhook signing secret in a `NEXT_PUBLIC_` variable. Those are server-only — see [Public API authentication](/api/authentication).
+</Warning>
+
+## Gotchas
+
+| Symptom | Cause |
+|---|---|
+| `window is not defined` at build time | The SDK was imported at module scope. Move it inside `useEffect`. |
+| Two launchers appear in dev | Strict Mode double-invoked the effect. Guard with a `cancelled` flag and destroy on cleanup. |
+| UI disappears but audio continues | You called `controller.destroy()` without `dialer.destroy()`. |
+| OTP after every reload | `sessionStorage` is blocked, or the component remounts across tabs. See [Troubleshooting](/dialer-sdk/troubleshooting). |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CRM contacts" icon="address-book" href="/dialer-sdk/contacts">
+    Attach the record on screen
+  </Card>
+  <Card title="Theming" icon="palette" href="/dialer-sdk/theming">
+    Match your design system
+  </Card>
+</CardGroup>

@@ -18,7 +18,8 @@
             "pages": [
               "introduction",
               "howitworks",
-              "quickstart"
+              "quickstart",
+              "build-on-ringee"
             ]
           },
           {
@@ -46,6 +47,127 @@
               "providers/overview",
               "providers/add-provider",
               "providers/telnyx"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Public API",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "CRM to Ringee",
+            "pages": [
+              "api/inbound-events",
+              "api/click-to-call"
+            ]
+          },
+          {
+            "group": "Ringee to CRM",
+            "pages": [
+              "api/outbound-webhooks",
+              "api/events-reference"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "api/build-an-integration",
+              "api/logs-and-errors"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "mcp/overview",
+              "mcp/connect"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "mcp/tools",
+              "mcp/workspaces",
+              "mcp/safety"
+            ]
+          },
+          {
+            "group": "Apps",
+            "pages": [
+              "mcp/apps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "cli/overview",
+              "cli/configuration"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "cli/commands",
+              "cli/agents"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Dialer SDK",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "dialer-sdk/overview",
+              "dialer-sdk/quickstart",
+              "dialer-sdk/publishable-keys"
+            ]
+          },
+          {
+            "group": "Integration Modes",
+            "pages": [
+              "dialer-sdk/floating",
+              "dialer-sdk/bar",
+              "dialer-sdk/headless"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "dialer-sdk/react",
+              "dialer-sdk/contacts",
+              "dialer-sdk/theming"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "dialer-sdk/reference",
+              "dialer-sdk/errors"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "dialer-sdk/security",
+              "dialer-sdk/troubleshooting"
             ]
           }
         ]

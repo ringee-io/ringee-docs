@@ -1,0 +1,146 @@
+---
+title: Theming and copy
+sidebarTitle: Theming
+description: 'Match the dialer to your product'
+---
+
+The bundled UIs render inside an isolated Shadow DOM, so your page styles never leak in and the dialer never leaks out. Customization goes through the theme object, CSS custom properties, and copy overrides.
+
+## Language
+
+English is the default. Spanish is available explicitly:
+
+```ts
+createFloating({
+  key: "pk_live_xxxxx",
+  locale: "en", // default; use "es" for Spanish
+});
+```
+
+## Copy overrides
+
+`strings` replaces individual labels on top of the selected language:
+
+```ts
+createBar({
+  key: "pk_live_xxxxx",
+  container: "#ringee-bar",
+  strings: {
+    callButton: "Call prospect",
+    numberLabel: "Prospect phone number",
+  },
+});
+```
+
+Override only what you need — everything else falls back to the locale.
+
+<Note>
+The bundled UIs translate backend error codes into actionable messages for you. In [Headless](/dialer-sdk/headless), that mapping is yours to write — see [Errors](/dialer-sdk/errors).
+</Note>
+
+## Theme object
+
+```ts
+const ringee = createFloating({
+  key: "pk_live_xxxxx",
+  theme: {
+    primary: "#4f46e5",
+    primaryHover: "#4338ca",
+    onPrimary: "#ffffff",
+    radius: "14px",
+    fontFamily: "Inter, sans-serif",
+    colorScheme: "auto",
+  },
+});
+```
+
+Update it at runtime:
+
+```ts
+ringee.setTheme({
+  primary: "#0f766e",
+  colorScheme: "dark",
+});
+```
+
+### Theme fields
+
+| Group | Fields |
+|---|---|
+| Brand | `primary`, `primaryHover`, `onPrimary` |
+| Surfaces | `background`, `surface`, `text`, `textMuted`, `border` |
+| Status | `danger`, `success`, `warning` |
+| Shape | `radius`, `shadow`, `fontFamily` |
+| Scheme | `colorScheme` — `"auto"`, `"light"` or `"dark"` |
+
+`"auto"` follows the viewer's system preference.
+
+## CSS custom properties
+
+The same values are settable as CSS variables on any ancestor, which is often easier when you already have design tokens:
+
+```css
+#crm-shell {
+  --ringee-primary: #4f46e5;
+  --ringee-primary-hover: #4338ca;
+  --ringee-on-primary: #ffffff;
+  --ringee-background: #ffffff;
+  --ringee-surface: #f8fafc;
+  --ringee-text: #0f172a;
+  --ringee-text-muted: #64748b;
+  --ringee-border: #e2e8f0;
+  --ringee-danger: #dc2626;
+  --ringee-success: #16a34a;
+  --ringee-warning: #d97706;
+  --ringee-radius: 14px;
+  --ringee-shadow: 0 20px 50px rgb(15 23 42 / 18%);
+  --ringee-font-family: Inter, sans-serif;
+}
+```
+
+<Tip>
+Wire these to your existing tokens and the dialer follows your theme switcher automatically — no `setTheme()` call needed.
+</Tip>
+
+## Workspace label
+
+Show which Ringee workspace the agent is calling from in the panel footer:
+
+```ts
+createFloating({
+  key: "pk_live_xxxxx",
+  workspaceName: "Acme Sales",
+});
+```
+
+## Optional controls
+
+Hold and resume are hidden by default. Enable them when your team uses them:
+
+```ts
+createFloating({
+  key: "pk_live_xxxxx",
+  allowHold: true,
+});
+```
+
+## When theming is not enough
+
+If you need a layout the bundled UIs do not offer — a dialer embedded in a table row, a custom call screen, a completely different flow — use [Headless](/dialer-sdk/headless). It exposes authentication, calls, devices and events with no markup at all.
+
+The `ui-gallery` playground in the repository renders every Floating and Bar state against a simulated dialer, with no network or WebRTC. It is the fastest way to check a theme against real states:
+
+```bash
+apps/sdk-playground/ui-gallery
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="API reference" icon="book" href="/dialer-sdk/reference">
+    Every option in one table
+  </Card>
+  <Card title="Headless" icon="code" href="/dialer-sdk/headless">
+    Full control over the interface
+  </Card>
+</CardGroup>

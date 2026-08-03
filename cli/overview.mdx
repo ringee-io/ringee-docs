@@ -1,0 +1,99 @@
+---
+title: CLI overview
+sidebarTitle: Overview
+description: 'Operate Ringee from the terminal'
+---
+
+The `ringee` CLI puts contacts, leads, call history, dialing sessions and follow-ups behind a handful of commands. It is a thin front end over the Ringee [MCP server](/mcp/overview) — the same tools an AI assistant would call, with the same guardrails.
+
+```bash
+npm i -g ringee
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/sse"
+
+ringee config check
+ringee contacts search acme
+```
+
+<CardGroup cols={2}>
+  <Card title="Configure the connection" icon="gear" href="/cli/configuration">
+    Point the CLI at your workspace
+  </Card>
+  <Card title="Command reference" icon="terminal" href="/cli/commands">
+    Every command, argument and flag
+  </Card>
+</CardGroup>
+
+## Install
+
+<CodeGroup>
+
+```bash Global
+npm i -g ringee
+ringee --help
+```
+
+```bash No install
+npx ringee --help
+```
+
+```bash From the repo
+pnpm ringee contacts search acme
+pnpm --filter ringee dev -- config check
+```
+
+</CodeGroup>
+
+Requires **Node 20 or newer**. The published binary pulls in three dependencies — `@modelcontextprotocol/sdk`, `zod` and `commander`.
+
+## What it is good for
+
+| Use case | Why the CLI |
+|---|---|
+| Quick lookups | `ringee contacts search acme` beats opening the dashboard |
+| Scripting | `--json` on any command gives machine-readable output |
+| AI agents | Any harness that can run shell commands can drive Ringee |
+| Debugging MCP | `ringee config check` lists every tool the server exposes |
+| CI and automation | No browser, no session cookie — just an env var |
+
+## Command groups
+
+| Group | Purpose |
+|---|---|
+| `contacts` | Search, view, create, update, delete; find by call outcome |
+| `leads` | Prospect via Apollo or Prospeo; reveal and import |
+| `sessions` | Magic-link dialing queues |
+| `calls` | Browse call history with outcomes, transcriptions and recordings |
+| `outcomes`, `callbacks`, `meetings` | Log results and book the next touch |
+| `config` | Connection diagnostics and the shared agent knowledge |
+
+## Safety
+
+Sensitive and destructive commands refuse to run without an explicit flag, so neither a typo nor an autonomous agent can spend credits, mint a shareable link or delete data by accident.
+
+```bash
+ringee leads reveal <jobId> <externalId> --yes
+ringee sessions create --contact <id> --yes
+ringee sessions revoke <sessionId> --yes
+ringee contacts delete <id> --confirm-phone +14155550123 --yes
+```
+
+See [Safety and confirmations](/mcp/safety).
+
+## Output modes
+
+By default the CLI prints readable, formatted output. Add `--json` to any command for the raw payload:
+
+```bash
+ringee contacts search acme --json | jq '.contacts[].phoneNumber'
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Environment variables and diagnostics
+  </Card>
+  <Card title="Use it from an agent" icon="robot" href="/cli/agents">
+    Drive Ringee from Claude Code or any shell-capable harness
+  </Card>
+</CardGroup>

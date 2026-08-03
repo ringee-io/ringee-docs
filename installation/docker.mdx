@@ -68,7 +68,7 @@ docker run -d \
   ringee worker
 ```
 
-### Frontend (Admin)
+### Frontend
 
 ```bash
 docker run -d \
@@ -76,16 +76,6 @@ docker run -d \
   --env-file .env \
   -p 4200:4200 \
   ringee frontend
-```
-
-### Frontend (Consumer)
-
-```bash
-docker run -d \
-  --name ringee-frontend-b2c \
-  --env-file .env \
-  -p 4201:4201 \
-  ringee frontend-b2c
 ```
 
 ## Verify
@@ -97,8 +87,8 @@ docker ps --filter "name=ringee"
 ```
 
 Then open:
-- **Admin frontend** → [http://localhost:4200](http://localhost:4200)
-- **Consumer frontend** → [http://localhost:4201](http://localhost:4201)
+- **Frontend** → [http://localhost:4200](http://localhost:4200)
+- **Backend API** → [http://localhost:3000/api](http://localhost:3000/api)
 
 ## Next steps
 

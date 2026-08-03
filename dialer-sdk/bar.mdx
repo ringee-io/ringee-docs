@@ -1,0 +1,136 @@
+---
+title: Inline bar
+sidebarTitle: Bar
+description: 'Render the dialer inside an element of your own layout'
+---
+
+Bar renders the dialer inside a container you provide. It adapts to the available width and creates no floating launcher — use it when your layout already has a dedicated place for calling, like a toolbar, a sidebar, or a contact record panel.
+
+## CDN
+
+```html
+<div id="ringee-bar"></div>
+
+<script src="https://unpkg.com/@ringee/dialer-sdk"></script>
+<script>
+  const ringeeBar = Ringee.createBar({
+    key: "pk_live_xxxxx",
+    container: "#ringee-bar",
+    locale: "en",
+  });
+
+  ringeeBar.setContact({
+    name: "Avery Stone",
+    number: "+14155550142",
+    externalContactId: "contact-802",
+  });
+</script>
+```
+
+## npm
+
+```ts
+import { createBar } from "@ringee/dialer-sdk/ui";
+
+const ringeeBar = createBar({
+  key: "pk_live_xxxxx",
+  container: document.getElementById("ringee-bar")!,
+  agentEmail: currentUser.email,
+  locale: "en",
+});
+```
+
+## The container
+
+`container` is **required** and accepts:
+
+| Form | Example |
+|---|---|
+| An element | `document.getElementById("ringee-bar")` |
+| An id | `"ringee-bar"` |
+| A CSS selector | `"#sidebar .dialer"` |
+
+<Warning>
+The element must exist when `createBar()` runs — the SDK throws otherwise. In a framework, create the controller after the container has rendered.
+</Warning>
+
+Bar accepts every [common option](/dialer-sdk/reference#common-ui-options). The Floating-only options (`side`, `defaultOpen`, `rememberOpen`) do not apply.
+
+## Controller methods
+
+| Method | Description |
+|---|---|
+| `setContact(contact)` | Attach the contact currently on screen |
+| `prefill(number)` | Prefill just the destination |
+| `setTheme(theme)` | Update the theme at runtime |
+| `on(event, handler)` | Subscribe to a headless event |
+| `destroy()` | Remove the UI and its listeners |
+| `dialer` | The underlying headless instance |
+
+Bar has no `open()`, `close()`, `toggle()` or `startCall()` — it is always visible, and calls start from the rendered controls. To place a call programmatically, go through the headless instance:
+
+```ts
+await ringeeBar.dialer.call({ to: "+13055550142" });
+```
+
+## Follow the selected record
+
+```ts
+function onContactSelected(contact) {
+  ringeeBar.setContact({
+    name: contact.fullName,
+    number: contact.phone,
+    imageUrl: contact.avatarUrl,
+    externalContactId: contact.id,
+  });
+}
+```
+
+See [CRM contacts](/dialer-sdk/contacts) for how `contactId` and `externalContactId` differ.
+
+## Layout notes
+
+The bar sizes itself to the container. Make sure your layout does not collapse it:
+
+```css
+#ringee-bar {
+  width: 100%;
+  min-width: 320px;
+}
+```
+
+If the bar does not appear, a zero-width or zero-height container is the usual cause. See [Troubleshooting](/dialer-sdk/troubleshooting).
+
+## Clean up
+
+```ts
+ringeeBar.destroy();
+await ringeeBar.dialer.destroy();
+```
+
+## Sharing one engine between surfaces
+
+If you render both a Floating panel and a Bar, pass the same headless instance so they share one session and one active call:
+
+```ts
+import { RingeeDialer } from "@ringee/dialer-sdk";
+import { createBar, createFloating } from "@ringee/dialer-sdk/ui";
+
+const dialer = new RingeeDialer({ key: "pk_live_xxxxx" });
+
+const bar = createBar({ key: "pk_live_xxxxx", container: "#ringee-bar", dialer });
+const floating = createFloating({ key: "pk_live_xxxxx", dialer });
+```
+
+Destroy the shared dialer only after every consumer is done with it.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Headless" icon="code" href="/dialer-sdk/headless">
+    Build the UI yourself
+  </Card>
+  <Card title="Theming" icon="palette" href="/dialer-sdk/theming">
+    Blend the bar into your design system
+  </Card>
+</CardGroup>

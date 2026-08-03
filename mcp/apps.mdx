@@ -1,0 +1,164 @@
+---
+title: Apps and skills
+description: 'Ringee inside Claude Code, claude.ai and ChatGPT'
+---
+
+The MCP server gives an assistant the *tools*. Skills and apps give it the *operating knowledge* — which tool to use, in what order, and when to stop and ask.
+
+All of them sit on top of `@ringee-io/agent`, which holds the shared tool catalog, flows, prompts and safety rules. No business logic is duplicated: the Ringee backend stays the single source of truth.
+
+```text
+Ringee backend / MCP
+        │
+        ▼
+@ringee-io/agent          (catalog · flows · prompts · rules)
+        │
+        ├── ringee CLI     (terminal, any agent harness)
+        ├── Claude skills  (Claude Code + claude.ai)
+        └── ChatGPT app    (Apps SDK, visual cards)
+```
+
+## Claude Code plugin
+
+The plugin bundles the Ringee MCP server and the `/ringee` skill commands in one install.
+
+```text
+/plugin marketplace add ringee-io/ringee-app
+/plugin install ringee@ringee-io
+```
+
+On enable, Claude Code asks for your **Ringee MCP URL** and stores it in the keychain. Get it from the dashboard, or from `GET /api/mcp/connection-info` — see [Connect a client](/mcp/connect).
+
+Update later with `/plugin marketplace update`.
+
+## Skill commands
+
+| Command | What it does |
+|---|---|
+| `/ringee` | Entry point — routes to the right sub-skill |
+| `/ringee-prospect` | Find leads, reveal contact info, import as contacts |
+| `/ringee-contacts` | Search, view, create, update, delete contacts |
+| `/ringee-session` | Create, inspect, update, revoke magic-link dialing sessions |
+| `/ringee-followup` | Log an outcome and book the next touch |
+| `/ringee-flow` | Drive the full outbound flow end to end |
+
+Each skill enforces the confirmation rules in [Safety](/mcp/safety) — credit spend and destructive actions always stop for a human yes.
+
+## claude.ai
+
+claude.ai does not use Claude Code plugins. It needs the two pieces separately.
+
+<Steps>
+<Step title="Add the MCP as a connector">
+
+**Settings → Connectors → Add custom connector**, then paste your Ringee MCP URL. The server must be reachable from the public internet.
+
+</Step>
+
+<Step title="Upload the skills">
+
+Build the upload-ready zips from the repo:
+
+```bash
+pnpm agent:package-skills   # → packages/agent/dist/skills/*.zip
+```
+
+Then **Settings → Customize → Skills → Upload skill** and upload each zip. Skills require code execution to be enabled.
+
+</Step>
+
+<Step title="Use them">
+
+Type `/` in any chat and pick a Ringee command, or just describe what you want.
+
+</Step>
+</Steps>
+
+<Tip>
+On Team and Enterprise plans, upload once for everyone under **Organization settings → Skills** using the same zips.
+</Tip>
+
+## Installing skills into a project
+
+For Claude Code, copy the skills straight into a project's `.claude/skills`:
+
+```bash
+pnpm --filter @ringee-io/agent install-skills             # → ./.claude/skills
+node packages/agent/scripts/install-skills.mjs ~/project  # → ~/project/.claude/skills
+```
+
+## ChatGPT app
+
+The ChatGPT app is itself an MCP server (`apps/chatgpt-app`) that proxies the Ringee tools and renders them as **visual cards** — contact lists, call sessions, workspace switchers — instead of walls of JSON.
+
+Widgets are compiled into a bundle and inlined into each tool's HTML resource, so the MCP server is the only thing you deploy.
+
+<Steps>
+<Step title="Build the widgets">
+
+```bash
+pnpm --filter @ringee-io/chatgpt-app build:widgets
+```
+
+</Step>
+
+<Step title="Run it locally">
+
+```bash
+cp apps/chatgpt-app/.env.example apps/chatgpt-app/.env   # set RINGEE_MCP_URL
+pnpm --filter @ringee-io/chatgpt-app mcp:prod            # serves :4250/mcp
+```
+
+Test with `npx @modelcontextprotocol/inspector` against `http://localhost:4250/mcp`, or expose it with `ngrok http 4250` and add it as a connector in ChatGPT developer mode.
+
+</Step>
+
+<Step title="Deploy behind HTTPS">
+
+```bash
+docker build -f apps/chatgpt-app/Dockerfile -t ringee-chatgpt-mcp .
+docker run -p 4250:4250 --env-file apps/chatgpt-app/.env ringee-chatgpt-mcp
+```
+
+The connector URL is `https://<host>/mcp`.
+
+</Step>
+
+<Step title="Add OAuth">
+
+ChatGPT requires OAuth 2.1 for connectors that touch user data. Point it at Clerk (or any OAuth 2.1 server with PKCE and published JWKS):
+
+```bash
+RINGEE_REQUIRE_AUTH=true
+RINGEE_OAUTH_ISSUER=https://auth.example.com
+RINGEE_OAUTH_JWKS_URL=https://auth.example.com/.well-known/jwks.json
+RINGEE_OAUTH_AUDIENCE=https://your-host/mcp
+```
+
+</Step>
+</Steps>
+
+<Info>
+If you only need the Ringee tools in ChatGPT without custom widgets, connect the backend's authenticated endpoint directly: `https://api.ringee.io/api/mcp/chatgpt/sse`. See [Connect a client](/mcp/connect#chatgpt).
+</Info>
+
+## Domain verification
+
+OpenAI's developer portal verifies you control the MCP hostname by fetching a fixed token:
+
+```http
+GET /.well-known/openai-apps-challenge
+```
+
+The backend serves it verbatim as `text/plain` from `OPENAI_APPS_CHALLENGE_TOKEN`. Each verified origin gets its own token — the backend and a separately deployed ChatGPT server cannot share one.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="ringee CLI" icon="terminal" href="/cli/overview">
+    The same capabilities from a terminal
+  </Card>
+  <Card title="Agent layer" icon="cube" href="/cli/agents">
+    Build your own agent on `@ringee-io/agent`
+  </Card>
+</CardGroup>

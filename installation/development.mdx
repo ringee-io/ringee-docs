@@ -74,20 +74,12 @@ Run all services concurrently:
 pnpm dev
 ```
 
-Or start services individually:
+`pnpm dev` runs the backend and the frontend in parallel. Start services individually with:
 
 ```bash
-# Backend API
-pnpm --filter backend dev
-
-# Worker
-pnpm --filter worker dev
-
-# Admin Frontend (B2B)
-pnpm --filter frontend dev
-
-# Consumer Frontend (B2C)
-pnpm --filter frontend-b2c dev
+pnpm dev:backend        # NestJS API on :3000
+pnpm dev:frontend       # Next.js on :4200
+pnpm dev:orchestrator   # Temporal worker
 ```
 
 </Step>
@@ -97,22 +89,35 @@ pnpm --filter frontend-b2c dev
 
 | Service | URL |
 |---|---|
-| Admin Frontend (B2B) | [http://localhost:4200](http://localhost:4200) |
-| Consumer Frontend (B2C) | [http://localhost:4201](http://localhost:4201) |
-| Backend API | [http://localhost:3000](http://localhost:3000) |
+| Frontend | [http://localhost:4200](http://localhost:4200) |
+| Backend API | [http://localhost:3000/api](http://localhost:3000/api) |
+| Temporal UI | [http://localhost:8080](http://localhost:8080) |
 
 ## Project structure
 
 ```
 ringee/
 ├── apps/
-│   ├── frontend/         # Next.js admin app (B2B)
-│   ├── frontend-b2c/     # Next.js consumer app (B2C)
-│   ├── backend/          # NestJS REST API
-│   └── worker/           # NestJS background jobs
-├── packages/             # Shared libraries
-├── prisma/               # Database schema & migrations
-├── docker-compose.app.yml
+│   ├── frontend/           # Next.js app (marketing + dashboard)
+│   ├── backend/            # NestJS REST API, Public API, MCP, SDK endpoints
+│   ├── orchestrator/       # Temporal worker (background jobs + schedules)
+│   ├── agent-cli/          # The `ringee` CLI
+│   ├── browser-extension/  # Chrome extension
+│   ├── chatgpt-app/        # ChatGPT App (Apps SDK MCP server)
+│   ├── attio/              # Attio CRM integration
+│   └── sdk-playground/     # Dialer SDK playgrounds
+├── packages/
+│   ├── database/           # Prisma schema, client, migrations
+│   ├── platform/           # Auth, Redis, email, storage, Stripe, telephony
+│   ├── services/           # Domain services
+│   ├── configuration/      # Env config with startup validation
+│   ├── agent/              # @ringee-io/agent — the agent layer
+│   ├── dialer-core/        # Dialer engine
+│   ├── dialer-ui/          # Shared dialer UI
+│   ├── dialer-sdk/         # @ringee/dialer-sdk — the public browser SDK
+│   └── frontend-shared/    # Shared React components and hooks
+├── docker-compose.yml      # PostgreSQL, Redis, Temporal
+├── docker-compose.app.yml  # Backend, orchestrator, frontend
 ├── .env.example
 └── package.json
 ```

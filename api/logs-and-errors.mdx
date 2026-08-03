@@ -1,0 +1,112 @@
+---
+title: Logs and errors
+description: 'Debug inbound events and outbound deliveries'
+---
+
+Every event in both directions is logged and inspectable — from the dashboard or through the administrative API.
+
+## Where to look
+
+| Symptom | Look at |
+|---|---|
+| Your event never appeared in Ringee | **Inbound logs** |
+| Ringee never called your endpoint | **Outbound logs** |
+| Ringee called you but nothing was created | Your own idempotency table — the event was probably deduplicated |
+| Everything stopped at once | Integration status, and whether the API key was rotated |
+
+In the dashboard: **Integrations → Custom Integrations → Configure**, then the inbound and outbound log tabs.
+
+## Log endpoints
+
+Both require an admin dashboard session and support cursor pagination.
+
+```http
+GET /api/integrations/custom/:id/inbound-logs?limit=50&cursor=…
+GET /api/integrations/custom/:id/outbound-logs?limit=50&cursor=…
+```
+
+**Inbound logs** record every event you sent: the event type, your `eventId`, the raw payload, the processing status (`processing`, `processed`, `failed`, plus deduplicated ones) and the error message when it failed.
+
+**Outbound logs** record every delivery attempt: destination URL, payload, attempt count, HTTP status, latency, next scheduled retry and the last error.
+
+## Inbound errors
+
+These are returned synchronously to your request.
+
+| Status | Message | Fix |
+|---|---|---|
+| `401` | `Invalid API key format` | The header is missing or the value is not a well-formed `cik_live_` key. |
+| `401` | `Invalid API key` | The key does not match any integration — it was likely rotated. |
+| `401` | `Integration is disabled` | Re-enable the integration in the dashboard. |
+| `400` | `body must be a JSON object` | Send `Content-Type: application/json` and a JSON object. |
+| `400` | `event is required` | Add `event` to the envelope. |
+| `400` | `eventId is required` | Add a unique `eventId`. |
+| `400` | `occurredAt is required` | Add an ISO-8601 `occurredAt`. |
+| `400` | `data must be an object` | `data` must be a JSON object, even when nearly empty. |
+| `400` | `Unsupported event: …` | Only `contact.upserted`, `company.upserted`, `contact.deleted` and `company.deleted` are accepted inbound. |
+
+A `202` with `"status": "failed"` means the event was accepted, stored and then rejected during processing — for example a missing required field inside `data`. The reason is in `message` and in the inbound log.
+
+<Warning>
+Resending a failed event with the **same** `eventId` returns `skipped`, not a retry. Fix the payload and send it with a **new** `eventId`.
+</Warning>
+
+## Outbound delivery failures
+
+A delivery is retried when your endpoint returns a non-2xx status, times out after 15 seconds, or is unreachable.
+
+| Recorded error | Meaning |
+|---|---|
+| `HTTP 4xx` / `HTTP 5xx` | Your endpoint responded with a non-2xx status. |
+| Timeout or network error | No response within 15 seconds, or the host could not be reached. |
+| `integration not found` | The integration was deleted while the delivery was queued. |
+| `integration disabled` | The integration's status is no longer `active`. |
+| `no outbound URL configured` | Returned by **Test webhook** when no URL is set. |
+
+After 10 failed attempts the delivery is marked `failed` and Ringee emails the workspace to say the endpoint is down.
+
+## Common causes
+
+<AccordionGroup>
+<Accordion title="Signature verification always fails">
+
+You parsed the body before verifying. Read the **raw text** and HMAC exactly those bytes — a `JSON.parse` followed by `JSON.stringify` produces different bytes and a different digest.
+
+Also confirm you are hashing `` `${timestamp}.${rawBody}` ``, not the body alone, and that you are using the `whsec_` signing secret rather than the `cik_live_` API key.
+
+</Accordion>
+
+<Accordion title="Everything returns 401 after a rotation">
+
+Rotating the API key invalidates the old one immediately — and also revokes every Dialer SDK publishable key on that integration. Update both.
+
+</Accordion>
+
+<Accordion title="Contacts are duplicated in Ringee">
+
+You are sending a different `externalId` for the same record, or omitting it. Dedup runs on `externalId` first, then `phoneNumber`. Keep `externalId` stable for the lifetime of the record.
+
+</Accordion>
+
+<Accordion title="Fields are not being cleared">
+
+That is intentional. `null`, `undefined` and empty strings never overwrite existing values on upsert — this protects Ringee data from partial CRM payloads.
+
+</Accordion>
+
+<Accordion title="Your endpoint receives the same event twice">
+
+Expected. Retries and redeliveries reuse the `eventId`. Deduplicate on it with a `UNIQUE` constraint — see [Outbound webhooks](/api/outbound-webhooks#idempotency).
+
+</Accordion>
+
+<Accordion title="Recordings never arrive">
+
+`recording.ready` is a separate opt-in event that can arrive minutes after `call.completed`. Confirm it is selected in the outbound event list, and that recording is enabled for the workspace.
+
+</Accordion>
+</AccordionGroup>
+
+## Self-hosted debugging
+
+When running Ringee yourself, deliveries are drained by the Temporal orchestrator (`apps/orchestrator`). If outbound events queue up but never send, check that the orchestrator is running and connected to Temporal — see [How it works](/howitworks).

@@ -1,0 +1,115 @@
+---
+title: Ways to build on Ringee
+sidebarTitle: Build on Ringee
+description: 'Choose the right integration surface for what you are building'
+---
+
+Ringee exposes four ways to build on top of it. They are complementary — most real integrations use two.
+
+<CardGroup cols={2}>
+  <Card title="Public API" icon="webhook" href="/api/overview">
+    Server to server. Sync CRM records, receive call activity, open a secure dialer.
+  </Card>
+  <Card title="Dialer SDK" icon="phone" href="/dialer-sdk/overview">
+    Browser. Embed a real dialer inside your own web app.
+  </Card>
+  <Card title="MCP" icon="robot" href="/mcp/overview">
+    AI agents. Let Claude or ChatGPT read and act on Ringee data.
+  </Card>
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    Terminal and scripts. The same capabilities as MCP, in a shell.
+  </Card>
+</CardGroup>
+
+## Pick by what you are building
+
+| I want to… | Use |
+|---|---|
+| Log Ringee calls as activities in my CRM | [Public API](/api/overview) |
+| Push my contacts into Ringee so they are callable | [Public API — inbound events](/api/inbound-events) |
+| Add a "Call" button with the least possible work | [Click-to-call](/api/click-to-call) |
+| Keep agents inside my product while they call | [Dialer SDK](/dialer-sdk/overview) |
+| Build a completely custom call interface | [Dialer SDK — headless](/dialer-sdk/headless) |
+| Let an assistant find leads and book follow-ups | [MCP](/mcp/overview) |
+| Script bulk operations or run them in CI | [CLI](/cli/overview) |
+| Give an autonomous agent access to Ringee | [CLI from an agent](/cli/agents) |
+
+## Side by side
+
+| | Public API | Dialer SDK | MCP | CLI |
+|---|---|---|---|---|
+| Runs in | Your server | The browser | An AI client | A shell |
+| Credential | `cik_live_` (secret) | `pk_live_` (public) | MCP URL or OAuth | MCP URL |
+| Backend required | Yes | No | No | No |
+| Places calls | Via click-to-call | Yes | No | No |
+| Receives call activity | Yes, via webhooks | Live events only | Read on demand | Read on demand |
+| Custom UI | N/A | Yes | No | No |
+
+<Note>
+No integration surface can dial a number server-side. Calls run over WebRTC in a browser or mobile app. The Public API and MCP get someone dialing by handing them a secure link; the Dialer SDK does it in your own page.
+</Note>
+
+## A typical CRM integration
+
+Most teams combine two surfaces:
+
+```mermaid
+flowchart LR;
+    classDef crm fill:#86EFAC,color:black,stroke:#fff
+    classDef svc fill:#15803D,color:white,stroke:#fff
+
+    sync[Public API: sync contacts]:::svc
+    call[Dialer SDK or click-to-call]:::svc
+    hook[Public API: webhooks]:::svc
+    crm[Your CRM]:::crm
+
+    crm --> sync --> call --> hook --> crm
+```
+
+<Steps>
+<Step title="Sync your records">
+
+Send `contact.upserted` so Ringee knows who is callable, and keep `externalId` stable — it is the join key for everything that follows. See [Inbound events](/api/inbound-events).
+
+</Step>
+
+<Step title="Let agents call">
+
+Embed the [Dialer SDK](/dialer-sdk/overview) for an in-product experience, or use [click-to-call](/api/click-to-call) if you want the fastest possible path.
+
+</Step>
+
+<Step title="Receive the activity">
+
+Subscribe to `call.completed`, `call.outcome.updated` and `recording.ready` and write them into your CRM. Signed, retried, idempotent. See [Outbound webhooks](/api/outbound-webhooks).
+
+</Step>
+</Steps>
+
+## Credentials at a glance
+
+| Credential | Belongs to | Where it lives |
+|---|---|---|
+| `cik_live_…` | Public API | Your server only |
+| `whsec_…` | Webhook verification | Your server only |
+| `pk_live_…` | Dialer SDK | Safe in the browser |
+| MCP URL | MCP and CLI | A secret manager or shell profile |
+
+All of them come from the same place: a **Custom Integration** in **Integrations → Custom Integrations**, except the MCP URL, which comes from `GET /api/mcp/connection-info`.
+
+<Warning>
+`cik_live_` and `pk_live_` look similar and are minted by the same integration, but only `pk_live_` is browser-safe. Rotating the `cik_live_` key revokes every `pk_live_` key on that integration.
+</Warning>
+
+## Self-hosting
+
+Every surface works against a self-hosted deployment. Replace `https://api.ringee.io` with your own backend URL:
+
+| Surface | How |
+|---|---|
+| Public API | Use your `BACKEND_URL` as the base |
+| Dialer SDK | Pass `apiUrl` (the API origin, without `/api`) |
+| MCP | The URL from `GET /api/mcp/connection-info` already points at your host |
+| CLI | Set `RINGEE_BACKEND_URL` or the full `RINGEE_MCP_URL` |
+
+See the [Configuration reference](/configuration/reference).

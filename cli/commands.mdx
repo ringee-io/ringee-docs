@@ -1,0 +1,230 @@
+---
+title: Command reference
+description: 'Every ringee CLI command, argument and flag'
+---
+
+Add `--json` to any command for raw, machine-readable output.
+
+```text
+ringee [--json] <group> <command> [args] [options]
+```
+
+Phone numbers are **E.164** (`+14155552671`). Datetimes are **ISO-8601 with an offset** (`2026-05-23T14:30:00-04:00`).
+
+## Contacts
+
+### `contacts search <query...>`
+
+Search by name, phone, email or company.
+
+| Option | Description |
+|---|---|
+| `-p, --page <n>` | Page number |
+| `-l, --limit <n>` | Page size, max 50 |
+
+```bash
+ringee contacts search acme
+ringee contacts search "ada lovelace" --limit 5
+```
+
+### `contacts get <contactId>`
+
+Full details for one contact, including recent calls, notes and meetings.
+
+### `contacts by-outcome <outcomes...>`
+
+Find contacts whose calls reached given outcomes — useful for deriving an ICP from closed business.
+
+| Option | Description |
+|---|---|
+| `--match <any\|last>` | `any` matches any call; `last` only the most recent |
+| `--include-unreachable` | Include `doNotCall` and `unsubscribed` contacts |
+| `-p, --page <n>` | Page number |
+| `-l, --limit <n>` | Page size, max 50 |
+
+```bash
+ringee contacts by-outcome sale interested --match last
+```
+
+Valid outcomes: `meeting_booked`, `sale`, `interested`, `follow_up`, `callback_scheduled`, `not_interested`, `no_answer`, `voicemail`, `wrong_number`, `gatekeeper`.
+
+### `contacts create`
+
+| Option | Description |
+|---|---|
+| `--phone <e164>` | **Required.** Must be unique in the workspace |
+| `--name <name>` | Display name |
+| `--first <firstName>` / `--last <lastName>` | Name parts |
+| `--email <email>` | Email |
+| `--title <jobTitle>` | Job title |
+| `--company <organization>` | Company name |
+| `--note <note>` | Initial note |
+
+```bash
+ringee contacts create --phone +14155552671 --name "Ada Lovelace" --company "Babbage Engines"
+```
+
+### `contacts update <contactId>`
+
+Accepts `--phone`, `--name`, `--first`, `--last`, `--email`, `--title`, `--company`. Only the flags you pass change.
+
+### `contacts delete <contactId>`
+
+<Warning>
+**Destructive.** Requires both `--confirm-phone` matching the stored number **and** `--yes`.
+</Warning>
+
+```bash
+ringee contacts get <contactId>          # verify the number first
+ringee contacts delete <contactId> --confirm-phone +14155552671 --yes
+```
+
+## Leads
+
+Prospecting uses your connected enrichment provider. These commands never spend Ringee calling credits.
+
+### `leads search`
+
+Returns a `jobId` you pass to `reveal` and `import`.
+
+| Option | Description |
+|---|---|
+| `--provider <name>` | `apollo` or `prospeo`. Auto-selected when omitted |
+| `--keywords <text>` | Free-text keywords |
+| `--title <t>` | Job title (repeatable or comma-separated) |
+| `--seniority <s>` | Seniority (repeatable) |
+| `--department <d>` | Department (repeatable) |
+| `--industry <i>` | Industry (repeatable) |
+| `--country <c>` / `--city <c>` | Person location (repeatable) |
+| `--company <name>` / `--domain <d>` | Company filters (repeatable) |
+| `--has-email` / `--has-phone` | Only candidates with that field |
+| `--page <n>` / `--per-page <n>` | Pagination, max 25 per page |
+
+```bash
+ringee leads search --title "VP Sales" --country US --industry Software
+```
+
+### `leads reveal <jobId> <externalId>`
+
+Unlocks email — and optionally phone — and upserts a Ringee contact.
+
+| Option | Description |
+|---|---|
+| `--phone` | Also reveal a mobile phone (extra provider credits) |
+| `-y, --yes` | **Required.** Confirms the credit spend |
+
+### `leads import <jobId> <externalIds...>`
+
+Bulk-imports candidates as contacts, deduplicated by phone number. Does not reveal hidden emails or phones.
+
+## Call sessions
+
+### `sessions create`
+
+Mints a magic link someone can open to dial through a queue without logging in.
+
+| Option | Description |
+|---|---|
+| `--contact <id>` | Contact in the queue (repeatable) |
+| `--phone <e164>` | Raw phone in the queue (repeatable) |
+| `--title <title>` | Session title |
+| `--campaign <campaignId>` | Attribute calls to a campaign |
+| `--max-calls <n>` | Auto-complete after N calls |
+| `-y, --yes` | **Required.** Confirms minting a shareable link |
+
+```bash
+ringee sessions create --contact <id> --contact <id> --title "Tue outbound" --yes
+```
+
+<Warning>
+The join URL is printed **once** and cannot be re-fetched. Share it only with someone authorized to call on the workspace's behalf.
+</Warning>
+
+### `sessions get <callSessionId>`
+
+Status and progress. Never prints the raw token.
+
+### `sessions update <callSessionId>`
+
+| Option | Description |
+|---|---|
+| `--title <title>` | New title |
+| `--campaign <campaignId>` | Set a campaign, or `null` to detach |
+| `--expires <minutes>` | Extend validity |
+
+### `sessions revoke <callSessionId>`
+
+<Warning>
+**Destructive.** Requires `--yes`. The link stops working immediately; call history is preserved.
+</Warning>
+
+## Calls and follow-ups
+
+### `calls list`
+
+Full call detail, newest first.
+
+| Option | Description |
+|---|---|
+| `--contact <contactId>` | Filter to one contact |
+| `--outcome <outcomes...>` | Filter by logged outcome |
+| `--status <statuses...>` | Filter by status, e.g. `completed` |
+| `--from <iso>` / `--to <iso>` | Created-at range |
+| `--full` | Print the full transcription instead of a preview |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50 |
+
+```bash
+ringee calls list --outcome sale --from 2026-05-01T00:00:00Z --full
+```
+
+### `outcomes log <callId> <outcome>`
+
+| Option | Description |
+|---|---|
+| `--note <note>` | Free-text follow-up note |
+
+### `callbacks create <contactId> <scheduledAt>`
+
+| Option | Description |
+|---|---|
+| `--call <callId>` | Source call id |
+| `--note <note>` | Free-text note |
+
+```bash
+ringee callbacks create <contactId> 2026-05-24T10:00:00-04:00 --note "Asked for Monday"
+```
+
+### `meetings schedule <contactId> <scheduledAt>`
+
+| Option | Description |
+|---|---|
+| `--title <title>` | Meeting title |
+| `--duration <minutes>` | Defaults to 30 |
+| `--location <location>` | Address or video URL |
+| `--notes <notes>` | Notes |
+
+## Config and knowledge
+
+| Command | Description |
+|---|---|
+| `ringee config show` | Resolved connection, token masked |
+| `ringee config check` | Connect and list every tool the server exposes |
+| `ringee tools` | The agent capability catalog with sensitivity tags |
+| `ringee flow` | The outbound sales flow, step by step |
+| `ringee prompt` | The shared agent system prompt |
+
+`tools`, `flow` and `prompt` need no connection — they print the shared knowledge from `@ringee-io/agent`, which is handy when briefing your own agent.
+
+## Global options
+
+| Option | Description |
+|---|---|
+| `--json` | Raw JSON instead of formatted text |
+| `-v, --version` | Print the version |
+| `--help` | Help for any command or subcommand |
+
+## Next steps
+
+<Card title="Drive it from an agent" icon="robot" href="/cli/agents">
+  Use the CLI as an agent's Ringee interface
+</Card>

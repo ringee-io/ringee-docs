@@ -5,7 +5,7 @@ description: 'Learn the architecture of Ringee'
 
 ## Architecture
 
-Ringee is composed of **3 main services** and **5 external services**. The main services communicate through HTTP, and connect to external services for data storage, telephony, auth, and payments.
+Ringee is composed of **3 main services** backed by a set of external services. The main services communicate through HTTP and Temporal, and connect to external services for data storage, telephony, auth, and payments.
 
 ```mermaid
 flowchart LR;
@@ -14,56 +14,103 @@ flowchart LR;
 
     frontend[Frontend - Next.js]:::svc
     backend[Backend - NestJS]:::svc
-    worker[Worker - NestJS]:::svc
-    redis[Redis]:::ext
+    orchestrator[Orchestrator - Temporal worker]:::svc
+    temporal[Temporal]:::ext
+    db[(PostgreSQL)]:::ext
 
     frontend --> backend
-    backend --> redis
-    worker --> redis
+    backend --> db
+    backend -- starts workflows --> temporal
+    temporal -- executes --> orchestrator
+    orchestrator --> db
 ```
 
 - [Frontend](#frontend) — Web interface for managing calls, contacts, and analytics.
 - [Backend](#backend) — REST API that handles all business logic and integrations.
-- [Worker](#worker) — Background job processor for async tasks.
+- [Orchestrator](#orchestrator) — Temporal worker that runs durable background jobs and schedules.
 
 ### Frontend
 
-Ringee has **two Next.js frontend applications**:
+A single **Next.js** application on port `4200`, using the App Router with feature-based organization:
 
-- **Admin (B2B)** — Team management, analytics dashboard, phone number management, billing. Runs on port `4200`.
-- **Consumer (B2C)** — Public-facing app for end users. Runs on port `4201`.
+- the marketing site;
+- the authenticated dashboard — calls, contacts, campaigns, analytics, numbers, billing;
+- the browser-based dialer, powered by Telnyx WebRTC.
 
-Both apps use **Clerk** for authentication and talk to the Backend API for all operations.
+It uses **Clerk** for authentication and talks to the backend API for all operations.
 
 ### Backend
 
-The backend is the brain of Ringee — a **NestJS** application that:
+The backend is the brain of Ringee — a **NestJS** application on port `3000` with a global `/api` prefix. It:
 
-- Handles all REST API requests
-- Manages Telnyx WebRTC call sessions
-- Processes Stripe webhooks for payments
-- Handles Clerk webhooks for user/org management
-- Manages contact imports, call recordings, and analytics
-- Sends emails through Resend
+- handles all REST API requests, protected by a Clerk auth guard;
+- manages Telnyx call control, number purchasing and WebRTC credentials;
+- processes Stripe webhooks for payments, credits and subscriptions;
+- handles Clerk webhooks for user and organization management;
+- serves the [Public API](/api/overview) for CRM integrations;
+- serves the [MCP server](/mcp/overview) for AI assistants;
+- serves the [Dialer SDK](/dialer-sdk/overview) endpoints under `/api/v1/sdk`;
+- starts durable workflows on Temporal.
 
-### Worker
+### Orchestrator
 
-The worker is a separate **NestJS** process that handles background jobs:
+A separate process (`apps/orchestrator`) that runs the **Temporal worker**. It executes the workflows the backend starts and owns the periodic schedules:
 
-- Call recording processing
-- Bulk contact imports
-- Analytics aggregation
-- Push notifications via Firebase Cloud Messaging
+- webhook delivery drains and retries;
+- callback, reminder and retry pollers;
+- CRM synchronization drains;
+- recording and transcription processing;
+- push notifications via Firebase Cloud Messaging.
+
+Workflow names and inputs are shared through a contracts file, so the backend and the orchestrator never drift.
+
+<Note>
+Temporal replaced the earlier Redis pub/sub worker. Redis is still used for caching and session state.
+</Note>
+
+## Shared packages
+
+Ringee is a pnpm workspaces monorepo. Business logic lives in shared packages rather than in any single app:
+
+| Package | Purpose |
+|---|---|
+| `@ringee/database` | Prisma client, schema and migrations |
+| `@ringee/platform` | Auth, Redis, email, storage, Stripe, telephony, notifications, AI, crypto |
+| `@ringee/services` | Domain services — call, contact, campaign, credit, subscription, recording, dashboard |
+| `@ringee/configuration` | Centralized environment config with startup validation |
+| `@ringee/frontend-shared` | Shared React components, hooks and utilities |
+| `@ringee/dialer-core`, `@ringee/dialer-ui` | The dialer engine and UI, shared by the web app and the browser extension |
+| `@ringee/dialer-sdk` | The public browser [Dialer SDK](/dialer-sdk/overview) |
+
+This is why the Public API, the MCP server, the CLI and the Dialer SDK all behave identically: they are different entry points into the same service layer.
 
 ## External Services
 
 | Service | Purpose |
 |---|---|
 | **PostgreSQL** | Primary database via Prisma ORM |
-| **Redis** | Session state, caching, and job queues |
+| **Redis** | Session state and caching |
+| **Temporal** | Durable workflow engine for background jobs and schedules |
 | **Telnyx** | WebRTC telephony — making and receiving calls |
 | **Clerk** | Authentication and multi-tenant team management |
 | **Stripe** | Billing, credits, subscriptions, and phone number purchases |
 | **Cloudflare R2** | File storage for call recordings and media |
 | **Resend** | Transactional emails |
 | **Firebase** | Push notifications for real-time call alerts |
+
+## Multi-tenancy
+
+Users belong to organizations through memberships. Most entities — calls, contacts, numbers, credits, campaigns — carry both a `userId` and an optional `organizationId`, so a user's personal data and their organizations' data stay separate.
+
+Every entry point respects this. The dashboard, the [Public API](/api/overview), the [MCP server](/mcp/workspaces) and the [Dialer SDK](/dialer-sdk/overview) all resolve the same ownership context before reading or writing.
+
+## Building on Ringee
+
+<CardGroup cols={2}>
+  <Card title="Ways to build" icon="puzzle-piece" href="/build-on-ringee">
+    Which integration surface fits your use case
+  </Card>
+  <Card title="Add a provider" icon="phone" href="/providers/add-provider">
+    Integrate another telephony provider
+  </Card>
+</CardGroup>

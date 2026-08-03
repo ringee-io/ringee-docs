@@ -1,0 +1,175 @@
+---
+title: Headless
+description: 'Authentication, calls, devices and events with no UI at all'
+---
+
+Headless exposes the full engine and renders nothing. You build every screen and react to every state. Choose it only when you need that control — the bundled UIs already handle sign-in, caller ID selection, keypad, call controls and error copy.
+
+## Create an instance
+
+```ts
+import { RingeeDialer, RingeeError } from "@ringee/dialer-sdk";
+
+const dialer = new RingeeDialer({
+  key: "pk_live_xxxxx",
+  debug: false,
+});
+
+// Subscribe BEFORE initialize() so the first state changes are not missed.
+dialer.on("authStateChanged", ({ state }) => renderAuthState(state));
+dialer.on("stateChanged", ({ state }) => renderCallState(state));
+dialer.on("authRequired", () => showEmailForm());
+dialer.on("ready", () => enableDialButton());
+dialer.on("answered", ({ call }) => startTimer(call.answeredAt));
+dialer.on("ended", ({ call }) => showSummary(call));
+dialer.on("failed", ({ error }) => showError(error.code, error.message));
+
+try {
+  await dialer.initialize();
+} catch (error) {
+  if (error instanceof RingeeError) {
+    showError(error.code, error.message);
+  }
+}
+```
+
+`initialize()` may resolve authenticated or anonymous:
+
+- a valid session in `sessionStorage` is restored, emitting `signedIn` and `ready`;
+- otherwise it emits `authRequired` and waits for the OTP flow.
+
+## Email one-time code
+
+```ts
+const challenge = await dialer.requestEmailCode("agent@company.com");
+
+const agent = await dialer.verifyEmailCode({
+  challengeId: challenge.id,
+  code: "184279",
+});
+
+console.log("Signed in as", agent.email);
+```
+
+Resend:
+
+```ts
+const nextChallenge = await dialer.resendEmailCode(challenge.id);
+```
+
+Use `challenge.resendAvailableAt` to gate the resend button and `challenge.expiresAt` to show a countdown.
+
+<Note>
+Ringee does not reveal whether an email exists. A code is "sent" for any well-formed address — do not build enumeration hints into your UI.
+</Note>
+
+## Place and control a call
+
+```ts
+const call = await dialer.call({
+  to: "+13055550198",
+  callerIdId: selectedCallerId,
+  externalContactId: "crm-contact-294",
+});
+
+dialer.mute();
+dialer.unmute();
+await dialer.hold();
+await dialer.resume();
+dialer.sendDigits("123#");
+await dialer.hangup();
+```
+
+<Warning>
+Only one call can be active per instance or agent. The SDK uses Web Locks to prevent a second tab from starting one, and the server validates the restriction again.
+</Warning>
+
+## Caller IDs
+
+```ts
+const callerIds = dialer.getCallerIds();
+```
+
+Returns the caller IDs the authenticated agent may use. Render them as a selector and pass the chosen `callerIdId` to `call()`. Omit it to let Ringee choose.
+
+## Audio devices
+
+```ts
+const inputs = await dialer.getInputDevices();
+const outputs = await dialer.getOutputDevices();
+
+await dialer.setInputDevice(inputs[0].id);
+await dialer.setOutputDevice(outputs[0].id);
+```
+
+Output selection depends on browser support. `deviceChanged` fires when the selection changes.
+
+## Read current state
+
+```ts
+dialer.getState();       // DialerState
+dialer.getAuthState();   // AuthState
+dialer.getAgent();       // RingeeAgent | null
+dialer.getActiveCall();  // RingeeCall | null
+```
+
+Full lists: [call states](/dialer-sdk/reference#call-states) and [auth states](/dialer-sdk/reference#authentication-states).
+
+## Unsubscribe
+
+Every `on()` returns an unsubscribe function:
+
+```ts
+const off = dialer.on("stateChanged", ({ state }) => console.log(state));
+off();
+```
+
+## Sign out and clean up
+
+```ts
+await dialer.signOut(); // removes the persisted agent session
+await dialer.destroy(); // disconnects WebRTC and releases browser resources
+```
+
+<Warning>
+These are different operations. Destroying an instance does **not** sign the agent out; signing out does **not** release WebRTC.
+</Warning>
+
+## Building a good headless UI
+
+<AccordionGroup>
+<Accordion title="Do not assume every state fires">
+
+The exact sequence varies with the browser, the network and the remote destination. Render from the current state rather than from an expected transition order.
+
+</Accordion>
+
+<Accordion title="Translate error codes yourself">
+
+The bundled UIs turn backend error codes into actionable messages. Headless gives you raw `RingeeError` codes — map them to copy your users understand. See [Errors](/dialer-sdk/errors).
+
+</Accordion>
+
+<Accordion title="Require a user gesture">
+
+Start calls from a click. Browsers block audio playback that was not user-initiated.
+
+</Accordion>
+
+<Accordion title="Handle reconnecting">
+
+`reconnecting` is a normal transient state on flaky networks. Show it, but do not tear the call down.
+
+</Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="API reference" icon="book" href="/dialer-sdk/reference">
+    Every method, event and state
+  </Card>
+  <Card title="Errors" icon="triangle-exclamation" href="/dialer-sdk/errors">
+    Every error code and how to react
+  </Card>
+</CardGroup>

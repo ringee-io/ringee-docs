@@ -48,12 +48,11 @@ docker-compose -f docker-compose.app.yml up --build -d
 ```
 
 This will start:
-- **PostgreSQL** database
-- **Redis** cache
-- **Backend** API server
-- **Worker** background processor
-- **Admin Frontend** on port `4200`
-- **Consumer Frontend** on port `4201`
+- **Backend** API server on port `3000`
+- **Orchestrator** — the Temporal worker for background jobs
+- **Frontend** on port `4200`
+
+Bring up the infrastructure it depends on — PostgreSQL, Redis and Temporal — with `docker-compose up -d`.
 
 </Step>
 
@@ -66,8 +65,9 @@ docker-compose -f docker-compose.app.yml ps
 ```
 
 Then open:
-- **Admin frontend** → [http://localhost:4200](http://localhost:4200)
-- **Consumer frontend** → [http://localhost:4201](http://localhost:4201)
+- **Frontend** → [http://localhost:4200](http://localhost:4200)
+- **Backend API** → [http://localhost:3000/api](http://localhost:3000/api)
+- **Temporal UI** → [http://localhost:8080](http://localhost:8080)
 
 </Step>
 </Steps>

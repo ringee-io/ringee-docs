@@ -1,0 +1,156 @@
+---
+title: Security and self-hosting
+sidebarTitle: Security
+description: 'Why pk_live is safe in the browser, plus CSP, iframes and custom API hosts'
+---
+
+## Security does not depend on hiding the key
+
+`pk_live_…` is meant to ship in your frontend. Every call requires **all** of the following, validated server-side:
+
+- a signed publishable key;
+- an exact allowed origin;
+- an agent verified by email one-time code;
+- current workspace membership;
+- a valid Ringee session;
+- server-side permission, caller ID, credit, Do Not Call and block checks.
+
+A stolen publishable key on its own dials nothing.
+
+<Warning>
+Never place `cik_live_…` API keys, `whsec_…` signing secrets, SIP credentials or admin tokens in frontend code. Those are different credentials with different powers — see [Public API authentication](/api/authentication).
+</Warning>
+
+## CORS
+
+SDK endpoints live under `/api/v1/sdk/*` and are deliberately **non-credentialed** — they authenticate with a bearer token and the `X-Ringee-Key` header, never cookies. Ringee reflects the requesting origin (with `Vary: Origin`, never a wildcard) so your page can read responses.
+
+CORS is not the security boundary here. The publishable key, the origin allow-list and the OTP are.
+
+## Content Security Policy
+
+A restrictive CSP must allow the Ringee API and the calling WebSocket:
+
+```text
+script-src 'self' https://unpkg.com;
+connect-src 'self' https://api.ringee.io wss://rtc.telnyx.com;
+media-src 'self' blob:;
+```
+
+- An **npm** installation does not need `unpkg.com`.
+- For self-hosting, replace `https://api.ringee.io` with your API origin.
+- Regional Telnyx configuration may require an additional WebSocket origin.
+
+## Microphone and secure contexts
+
+Calls must run in a secure context — `https://` or `localhost`. Browsers refuse microphone access otherwise.
+
+### Inside an iframe
+
+The host document must grant the permission:
+
+```html
+<iframe src="https://dialer.crm.example.com" allow="microphone"></iframe>
+```
+
+<Warning>
+The origin in **allowed origins** is the origin of the document *executing* the SDK, which may differ from the parent page. A sandboxed iframe must also retain the origin and storage permissions the SDK needs.
+</Warning>
+
+Also check your host `Permissions-Policy` header — a restrictive `microphone=()` blocks the call before the SDK ever runs.
+
+## Session storage
+
+The agent session lives in `sessionStorage`, keyed by integration and origin:
+
+- it survives reloads in the same tab;
+- it is removed when the tab closes or `signOut()` runs;
+- it is never shared across origins.
+
+WebRTC credentials are held only in memory and re-minted on restore. If a browser or privacy setting blocks `sessionStorage`, the SDK still works — the agent just enters a code after each reload.
+
+## What the SDK never exposes
+
+The host application never sees SIP passwords, Telnyx JWTs, or any provider-specific object. The SDK encapsulates the provider entirely, which also means Ringee can change or add providers without breaking your integration.
+
+## Self-hosting
+
+Point the SDK at your own API origin, **without** `/api`:
+
+```ts
+const ringee = createFloating({
+  key: "pk_live_xxxxx",
+  apiUrl: "https://ringee-api.example.com",
+});
+```
+
+Local development:
+
+```ts
+const ringee = createFloating({
+  key: "pk_live_xxxxx",
+  apiUrl: "http://localhost:3000",
+  debug: true,
+});
+```
+
+<Warning>
+`apiUrl` and your frontend origin are different values. The frontend origin — for example `http://localhost:4200` — is what must appear in the publishable key's allowed origins.
+</Warning>
+
+Update your CSP to match your API and WebSocket origins.
+
+## Validating a build
+
+In the monorepo:
+
+```bash
+pnpm --filter @ringee/dialer-sdk typecheck
+pnpm --filter @ringee/dialer-sdk test
+pnpm --filter @ringee/dialer-sdk build
+```
+
+## Checklist before going live
+
+<AccordionGroup>
+<Accordion title="Keys and origins">
+
+- Production origin is in the publishable key's allowed origins.
+- The key was generated **after** the final origin list.
+- No `cik_live_` key, signing secret or admin token is reachable from the browser bundle.
+
+</Accordion>
+
+<Accordion title="Transport">
+
+- The page is served over HTTPS.
+- CSP allows the API origin and `wss://rtc.telnyx.com`.
+- Any iframe hosting the SDK has `allow="microphone"`.
+
+</Accordion>
+
+<Accordion title="Lifecycle">
+
+- Every mount has a matching `controller.destroy()` **and** `dialer.destroy()`.
+- Calls start from a user gesture, never on page load.
+- Errors are surfaced to the agent rather than swallowed.
+
+</Accordion>
+
+<Accordion title="Version">
+
+- The CDN URL is pinned to a specific version.
+
+</Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="bug" href="/dialer-sdk/troubleshooting">
+    Symptom-first fixes
+  </Card>
+  <Card title="Public API" icon="webhook" href="/api/overview">
+    Sync records and receive call activity
+  </Card>
+</CardGroup>

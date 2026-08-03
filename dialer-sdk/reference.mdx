@@ -1,0 +1,223 @@
+---
+title: API reference
+description: 'Options, controllers, methods, states and events'
+---
+
+## Entry points
+
+| Import | Exports |
+|---|---|
+| `@ringee/dialer-sdk` | `RingeeDialer`, `RingeeError`, types |
+| `@ringee/dialer-sdk/ui` | `createFloating`, `createBar`, controller types |
+| CDN global `Ringee` | `mount`, `createFloating`, `createBar` |
+
+## Common UI options
+
+Accepted by both `createFloating` and `createBar`.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `key` | `string` | **required** | `pk_live_…` publishable key |
+| `apiUrl` | `string` | `https://api.ringee.io` | API base URL, **without** `/api` |
+| `agentEmail` | `string` | — | Prefills the email field; does not authenticate |
+| `debug` | `boolean` | `false` | Verbose engine logs |
+| `dialer` | `RingeeDialer` | — | Reuse an existing headless instance |
+| `theme` | `RingeeTheme` | Ringee theme | Override visual tokens |
+| `locale` | `string` | `"en"` | `en` or `es` |
+| `strings` | `Partial<Strings>` | — | Override individual labels |
+| `allowHold` | `boolean` | `false` | Show Hold and Resume controls |
+| `workspaceName` | `string` | — | Workspace label in the footer |
+| `onError` | `(error) => void` | — | Receives typed errors the UI also renders |
+
+### Floating only
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `side` | `"left" \| "right"` | `"right"` | Launcher side |
+| `defaultOpen` | `boolean` | `false` | Open the panel on mount |
+| `rememberOpen` | `boolean` | `true` | Remember open state within the tab |
+| `container` | `HTMLElement` | `document.body` | Shadow DOM parent |
+
+### Bar only
+
+| Option | Type | Description |
+|---|---|---|
+| `container` | `HTMLElement \| string` | **Required.** Element, id, or CSS selector |
+
+## UI controllers
+
+| Method / property | Floating | Bar | Description |
+|---|:---:|:---:|---|
+| `dialer` | Yes | Yes | Underlying headless instance |
+| `open()` | Yes | — | Open the panel |
+| `close()` | Yes | — | Close the panel |
+| `toggle()` | Yes | — | Toggle the panel |
+| `startCall(input)` | Yes | — | Open and queue or start a call |
+| `setContact(contact)` | Yes | Yes | Attach the current contact, or `null` to clear |
+| `prefill(number)` | Yes | Yes | Prefill the number |
+| `setTheme(theme)` | Yes | Yes | Update the theme |
+| `on(event, handler)` | Yes | Yes | Subscribe to a headless event |
+| `destroy()` | Yes | Yes | Remove the UI and its listeners |
+
+<Warning>
+`controller.destroy()` removes the visual surface only. To release WebRTC, audio and the call lock:
+
+```ts
+controller.destroy();
+await controller.dialer.destroy();
+```
+
+If you supplied a shared `dialer`, destroy it only after every consumer has finished with it.
+</Warning>
+
+## `RingeeDialer` methods
+
+| Method | Returns | Purpose |
+|---|---|---|
+| `initialize()` | `Promise<void>` | Validate the installation and restore a session |
+| `destroy()` | `Promise<void>` | Disconnect and release resources |
+| `requestEmailCode(email)` | `Promise<EmailChallenge>` | Start email OTP |
+| `verifyEmailCode(input)` | `Promise<RingeeAgent>` | Verify the code |
+| `resendEmailCode(challengeId)` | `Promise<EmailChallenge>` | Resend the code |
+| `signOut()` | `Promise<void>` | Sign the agent out |
+| `getAuthState()` | `AuthState` | Current auth state |
+| `getAgent()` | `RingeeAgent \| null` | Authenticated agent |
+| `getCallerIds()` | `RingeeCallerId[]` | Caller IDs the agent may use |
+| `call(input)` | `Promise<RingeeCall>` | Authorize and start a call |
+| `hangup()` | `Promise<void>` | End the call |
+| `mute()` / `unmute()` | `void` | Microphone state |
+| `hold()` / `resume()` | `Promise<void>` | Hold state |
+| `sendDigits(digits)` | `void` | Send DTMF |
+| `getState()` | `DialerState` | Current dialer state |
+| `getActiveCall()` | `RingeeCall \| null` | Active call snapshot |
+| `getInputDevices()` | `Promise<AudioDevice[]>` | List microphones |
+| `getOutputDevices()` | `Promise<AudioDevice[]>` | List output devices |
+| `setInputDevice(id)` | `Promise<void>` | Store and validate preferred input |
+| `setOutputDevice(id)` | `Promise<void>` | Select output where supported |
+| `on(event, handler)` | `() => void` | Subscribe; returns unsubscribe |
+
+### `call(input)`
+
+| Field | Type | Description |
+|---|---|---|
+| `to` | `string` | **Required.** E.164 destination |
+| `callerIdId` | `string` | Caller ID to use. Omit to let Ringee choose |
+| `externalContactId` | `string` | The contact's id in your CRM |
+| `contactId` | `string` | Native Ringee contact UUID |
+| `name` | `string` | Display label |
+
+## Authentication states
+
+```text
+checking -> anonymous -> sending_code -> awaiting_code -> verifying
+                                                     -> authenticated
+                                                     -> error
+authenticated -> expired | signed_out
+```
+
+`AuthState`: `checking`, `anonymous`, `sending_code`, `awaiting_code`, `verifying`, `authenticated`, `expired`, `signed_out`, `error`.
+
+## Call states
+
+```text
+uninitialized -> initializing -> ready -> dialing -> ringing -> active
+                                      -> error                 -> held
+active | held -> reconnecting -> active
+active | held -> ending -> ended -> ready
+```
+
+`DialerState`: `uninitialized`, `initializing`, `ready`, `connecting`, `dialing`, `ringing`, `active`, `held`, `reconnecting`, `ending`, `ended`, `error`.
+
+<Warning>
+The exact sequence may skip states depending on the browser, the network or the remote destination. Render from the current state; do not assume every state always fires.
+</Warning>
+
+## Events
+
+Every subscription returns an unsubscribe function:
+
+```ts
+const off = dialer.on("stateChanged", ({ state }) => console.log(state));
+off();
+```
+
+| Event | Payload | Emitted when |
+|---|---|---|
+| `ready` | `{}` | Agent and WebRTC are ready |
+| `authStateChanged` | `{ state }` | Authentication state changes |
+| `authRequired` | `{}` | OTP is required |
+| `codeSent` | `{ challenge }` | A code was sent or resent |
+| `signedIn` | `{ agent }` | Agent authenticated |
+| `signedOut` | `{}` | Session signed out |
+| `sessionExpired` | `{}` | Session expired |
+| `stateChanged` | `{ state }` | Call state changes |
+| `dialing` | `{ call }` | Dialing starts |
+| `ringing` | `{ call }` | Destination rings |
+| `answered` | `{ call }` | Call answered |
+| `held` | `{ call }` | Call held |
+| `resumed` | `{ call }` | Call resumed |
+| `muted` | `{ call }` | Microphone muted |
+| `unmuted` | `{ call }` | Microphone unmuted |
+| `ended` | `{ call }` | Call ended normally |
+| `failed` | `{ call, error }` | Authorization or the call failed |
+| `tokenExpiring` | `{}` | Reserved for proactive credential renewal |
+| `microphoneDenied` | `{}` | Reserved — currently use the `error` / `failed` code |
+| `deviceChanged` | `{}` | Audio device selection changed |
+| `error` | `{ error }` | A typed general error occurred |
+
+## Persistence
+
+The agent session is stored in `sessionStorage` under a key scoped by integration and origin. It survives reloads in the same tab and is removed when the tab closes or `signOut()` runs.
+
+WebRTC credentials live only in memory and are minted again on restore. If a browser blocks `sessionStorage`, the SDK still works but asks for a code after every reload.
+
+## What happens under the hood
+
+<AccordionGroup>
+<Accordion title="During initialization">
+
+1. The SDK reads `window.location.origin`.
+2. It sends the publishable key and origin to Ringee.
+3. The backend validates the signature, that the integration is active, and the exact origin.
+4. The SDK checks `sessionStorage` for an agent session.
+5. If present, Ringee revalidates it and returns a fresh WebRTC credential.
+6. Otherwise it requests email OTP authentication.
+
+</Accordion>
+
+<Accordion title="During agent authentication">
+
+1. The agent enters an email address.
+2. Ringee sends a one-time code without revealing whether the email exists.
+3. The agent verifies the code.
+4. The backend validates workspace membership and calling permissions.
+5. The browser receives a Ringee session and temporary WebRTC credentials.
+6. The SDK connects the engine and emits `ready`.
+
+</Accordion>
+
+<Accordion title="During a call">
+
+1. The SDK validates E.164 locally.
+2. It acquires a lock so another tab cannot start a call.
+3. The backend validates the session, caller ID, credit, Do Not Call, blocks and contact.
+4. Ringee creates the call record and returns a signed correlation token.
+5. The browser requests microphone permission.
+6. The SDK starts the WebRTC call and maps provider states to Ringee states.
+7. On completion it releases audio and the lock, computes duration, and emits `ended` or `failed`.
+
+</Accordion>
+</AccordionGroup>
+
+The SDK never exposes SIP passwords, Telnyx JWTs or provider-specific objects to the host application.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Errors" icon="triangle-exclamation" href="/dialer-sdk/errors">
+    Every code and how to react
+  </Card>
+  <Card title="Security" icon="shield-check" href="/dialer-sdk/security">
+    CSP, iframes and self-hosting
+  </Card>
+</CardGroup>

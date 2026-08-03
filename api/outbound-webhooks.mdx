@@ -1,0 +1,227 @@
+---
+title: Outbound webhooks
+description: 'Receive Ringee call activity in your CRM, verified and idempotent'
+---
+
+Ringee pushes call activity to the HTTPS endpoint you configure on your Custom Integration. Every delivery is **HMAC-signed** and retried until your endpoint acknowledges it.
+
+## Configure the endpoint
+
+In **Integrations → Custom Integrations → Configure → Settings**:
+
+1. Set **outbound URL** to your public HTTPS endpoint.
+2. Select the events you want under the outbound event selector.
+3. Click **Test webhook** to send a `test.ping`.
+
+<Note>
+The endpoint must be reachable from the public internet and must **not** require your own auth token — Ringee authenticates by signing the body, not by sending credentials. Disable JWT verification on the route and verify the signature instead.
+</Note>
+
+## Delivery format
+
+```http
+POST https://your-crm.example.com/webhooks/ringee
+Content-Type: application/json
+Ringee-Signature: t=1747999938,v1=8f4c…
+Ringee-Timestamp: 1747999938
+```
+
+```json
+{
+  "event": "call.completed",
+  "eventId": "evt_01HX5ZBN7Y0Q3S4M2K1WJ8V5DC",
+  "occurredAt": "2026-05-23T14:42:18.000Z",
+  "workspaceId": "org_2k7yX…",
+  "integrationId": "ci_…",
+  "data": {}
+}
+```
+
+## Verify the signature
+
+<Warning>
+Read the request body as **raw text** first. Parsing the JSON before verifying — or re-serializing it — changes the bytes and the signature will never match.
+</Warning>
+
+The signature is `HMAC_SHA256(signingSecret, "<timestamp>.<rawBody>")`, hex-encoded.
+
+<Steps>
+<Step title="Parse the header">
+
+`Ringee-Signature` has the form `t=<unixSeconds>,v1=<hexDigest>`. Extract both parts.
+
+</Step>
+
+<Step title="Check the timestamp">
+
+Confirm `t` matches the `Ringee-Timestamp` header, and reject anything more than **5 minutes** old. This blocks replay attacks.
+
+</Step>
+
+<Step title="Recompute and compare">
+
+Compute the HMAC over `` `${timestamp}.${rawBody}` `` with your `whsec_…` secret and compare in **constant time**.
+
+</Step>
+
+<Step title="Reject failures with 401">
+
+A missing header or a bad signature is a `401`. Never store or process an unverified event.
+
+</Step>
+</Steps>
+
+<CodeGroup>
+
+```ts Node / TypeScript
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const TOLERANCE_SECONDS = 300;
+
+export function verifyRingeeWebhook(
+  rawBody: string,
+  signatureHeader: string | null,
+  timestampHeader: string | null,
+  secret: string,
+): boolean {
+  if (!signatureHeader || !timestampHeader) return false;
+
+  const parts = Object.fromEntries(
+    signatureHeader.split(",").map((p) => p.split("=") as [string, string]),
+  );
+  const timestamp = parts.t;
+  const signature = parts.v1;
+  if (!timestamp || !signature) return false;
+  if (timestamp !== timestampHeader) return false;
+
+  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(age) || age > TOLERANCE_SECONDS) return false;
+
+  const expected = createHmac("sha256", secret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest("hex");
+
+  if (expected.length !== signature.length) return false;
+  return timingSafeEqual(
+    Buffer.from(expected, "hex"),
+    Buffer.from(signature, "hex"),
+  );
+}
+```
+
+```python Python
+import hashlib, hmac, time
+
+TOLERANCE_SECONDS = 300
+
+def verify_ringee_webhook(raw_body: str, signature_header: str,
+                          timestamp_header: str, secret: str) -> bool:
+    if not signature_header or not timestamp_header:
+        return False
+
+    parts = dict(p.split("=", 1) for p in signature_header.split(","))
+    timestamp, signature = parts.get("t"), parts.get("v1")
+    if not timestamp or not signature or timestamp != timestamp_header:
+        return False
+
+    if abs(int(time.time()) - int(timestamp)) > TOLERANCE_SECONDS:
+        return False
+
+    expected = hmac.new(
+        secret.encode(), f"{timestamp}.{raw_body}".encode(), hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+```ts Supabase Edge Function
+Deno.serve(async (req) => {
+  const rawBody = await req.text(); // raw first — never req.json()
+
+  const ok = verifyRingeeWebhook(
+    rawBody,
+    req.headers.get("Ringee-Signature"),
+    req.headers.get("Ringee-Timestamp"),
+    Deno.env.get("RINGEE_WEBHOOK_SIGNING_SECRET")!,
+  );
+
+  if (!ok) return new Response("invalid signature", { status: 401 });
+
+  const event = JSON.parse(rawBody);
+  await handleEvent(event);
+
+  return new Response(JSON.stringify({ received: true }), { status: 200 });
+});
+```
+
+</CodeGroup>
+
+<Info>
+The Edge Function that receives Ringee webhooks must have `verify_jwt = false`. Ringee does not send a Supabase JWT — the HMAC signature is the authentication.
+</Info>
+
+## Respond correctly
+
+| Rule | Detail |
+|---|---|
+| Respond fast | Ringee aborts the request after **15 seconds**. |
+| Respond `2xx` | Anything else counts as a failed delivery and is retried. |
+| Do the work after | Acknowledge first, process asynchronously if your handler is slow. |
+| Answer `test.ping` | Return `200` with `{ "received": true, "event": "test.ping" }`. |
+
+## Idempotency
+
+The same `eventId` can arrive more than once — that is by design, not a bug. Retries, network timeouts and redeliveries all reuse it.
+
+Store received events in a table with a `UNIQUE` constraint on the event id:
+
+```sql
+create table ringee_webhook_events (
+  id                uuid primary key default gen_random_uuid(),
+  event_id          text unique not null,
+  event_type        text not null,
+  occurred_at       timestamptz,
+  payload           jsonb,
+  processing_status text not null default 'pending',
+  error_message     text,
+  received_at       timestamptz not null default now(),
+  processed_at      timestamptz
+);
+```
+
+Insert the `eventId` **before** processing. If the insert conflicts, the event is a duplicate: return `200` and do nothing else.
+
+## Retries
+
+| Setting | Value |
+|---|---|
+| Max attempts | 10 |
+| Backoff | Exponential from 2s, doubling per attempt |
+| Backoff cap | 5 minutes |
+| Request timeout | 15 seconds |
+
+After the final attempt the delivery is marked `failed` and Ringee notifies the workspace that the endpoint is down. Deliveries are also failed immediately if the integration has been disabled or deleted.
+
+<Tip>
+Inspect every attempt in the dashboard, or via `GET /api/integrations/custom/:id/outbound-logs`. See [Logs and errors](/api/logs-and-errors).
+</Tip>
+
+## Event ordering
+
+Deliveries are independent rows sent in parallel waves — **order is not guaranteed**.
+
+Design for this:
+
+- `call.outcome.updated` can arrive before `call.completed`. Upsert the activity by `callId` from either event.
+- `recording.ready` can arrive seconds or minutes after the call ended.
+- `meeting.created` and `call.outcome.updated` both fire when an outcome is `meeting_booked`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Event reference" icon="list" href="/api/events-reference">
+    Every outbound payload, field by field
+  </Card>
+  <Card title="Build an integration" icon="wrench" href="/api/build-an-integration">
+    Mapping, loop prevention and a test checklist
+  </Card>
+</CardGroup>

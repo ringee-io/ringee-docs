@@ -1,0 +1,140 @@
+---
+title: Troubleshooting
+description: 'Symptom-first fixes for the Dialer SDK'
+---
+
+## `DOMAIN_NOT_ALLOWED`
+
+Compare `window.location.origin` **exactly** with the origins in **Integrations → Custom Integrations → Configure → Settings → Dialer SDK · Publishable keys**.
+
+```js
+console.log(window.location.origin); // paste this into the allowed origins
+```
+
+Check the scheme, subdomain and port — `https://` and `http://` are different, and so are `crm.example.com` and `app.crm.example.com`.
+
+<Warning>
+Changing the origin list does **not** update existing keys. Generate a new publishable key after adding an origin, and deploy the new value.
+</Warning>
+
+## `INVALID_PUBLISHABLE_KEY`
+
+One of three things:
+
+- the key is malformed or truncated (check for a copy-paste line break);
+- the integration was deleted;
+- the integration's `cik_live_` API key was rotated, which revokes every publishable key.
+
+Generate a new publishable key.
+
+## `AUTH_REQUIRED`, or OTP appears after every reload
+
+Wait for the `ready` event before calling. Calling earlier is safe with `startCall()` on the Floating controller (it queues), but `dialer.call()` in Headless will reject.
+
+If the code is requested after *every* reload, the browser is blocking `sessionStorage` — check private browsing mode, an iframe without storage access, or a tracking-prevention setting.
+
+## `MICROPHONE_DENIED`
+
+<Steps>
+<Step title="Serve over HTTPS">
+Browsers only grant microphone access in a secure context. `localhost` is exempt.
+</Step>
+<Step title="Allow the site">
+Check the browser's per-site microphone permission — a previous "Block" is sticky.
+</Step>
+<Step title="Check Permissions-Policy">
+A host header of `microphone=()` blocks the request before the SDK runs.
+</Step>
+<Step title="Allow the iframe">
+```html
+<iframe src="…" allow="microphone"></iframe>
+```
+</Step>
+</Steps>
+
+## `AUDIO_PLAYBACK_BLOCKED`
+
+The browser requires a user gesture before playing audio. Start calls from a real click or tap — never automatically during page load or in a `useEffect` that runs on mount.
+
+## `INVALID_PHONE_NUMBER`
+
+Use E.164: `+`, country code, then the number, with no extension, spaces or punctuation.
+
+```text
++13055550198   ✅
+(305) 555-0198 ❌
+305-555-0198   ❌
+```
+
+## `CALL_ALREADY_ACTIVE`
+
+A call already exists — in this instance, or in another tab using the same integration. The SDK uses Web Locks across tabs and the server enforces it again.
+
+```ts
+const active = dialer.getActiveCall();
+if (active) await dialer.hangup();
+```
+
+## The bar does not appear
+
+Two usual causes:
+
+1. The container did not exist when `createBar()` ran. In a framework, create the controller after the container renders.
+2. The layout collapsed it. Give it a width:
+
+```css
+#ringee-bar { width: 100%; min-width: 320px; }
+```
+
+## The UI disappears but WebRTC stays connected
+
+`controller.destroy()` unmounts the visual surface only. Destroy the engine too:
+
+```ts
+controller.destroy();
+await controller.dialer.destroy();
+```
+
+## `window is not defined` at build time
+
+The package was imported at module scope in an SSR environment. Move it into `useEffect` with a dynamic import — see [React and Next.js](/dialer-sdk/react).
+
+## Two launchers in development
+
+React 18 Strict Mode invokes effects twice. Guard with a `cancelled` flag and destroy on cleanup — the pattern in [React and Next.js](/dialer-sdk/react) handles it.
+
+## Nothing happens and there are no errors
+
+Turn on verbose logs:
+
+```ts
+createFloating({ key: "pk_live_xxxxx", debug: true });
+```
+
+Then check, in order:
+
+1. **Network tab** — are requests to `/api/v1/sdk/*` reaching your API host?
+2. **Console** — is CSP blocking `connect-src` or the WebSocket?
+3. **`apiUrl`** — is it the API origin without `/api`, and is it the right environment?
+4. **Events** — subscribe to `error` and `failed` before `initialize()`.
+
+## Calls connect but the CRM never learns about them
+
+The browser `ended` event is live UI state, not a durable record. Activity reaches your CRM through [outbound webhooks](/api/outbound-webhooks). Check:
+
+- the integration has an outbound URL and the relevant events are selected;
+- your endpoint verifies the signature and returns `2xx` within 15 seconds;
+- the delivery log at `GET /api/integrations/custom/:id/outbound-logs`.
+
+See [Logs and errors](/api/logs-and-errors).
+
+## Still stuck
+
+<CardGroup cols={2}>
+  <Card title="Error reference" icon="triangle-exclamation" href="/dialer-sdk/errors">
+    Every code, with a fix
+  </Card>
+  <Card title="Open an issue" icon="github" href="https://github.com/ringee-io/ringee-app/issues">
+    Report a bug or ask a question
+  </Card>
+</CardGroup>

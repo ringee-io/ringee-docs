@@ -1,0 +1,377 @@
+---
+title: Event reference
+description: 'Every event Ringee sends to your CRM'
+---
+
+All outbound events share the envelope described in [Outbound webhooks](/api/outbound-webhooks#delivery-format) and add `workspaceId` and `integrationId`.
+
+| Event | Fires when | Subscription |
+|---|---|---|
+| [`call.completed`](#call-completed) | A call technically ended | Opt in |
+| [`call.outcome.updated`](#call-outcome-updated) | A user set or changed a call outcome | Opt in |
+| [`call.missed`](#call-missed) | An inbound call was not answered | Opt in |
+| [`call.failed`](#call-failed) | A call failed technically | Opt in |
+| [`note.created`](#note-created) | A note was added to a contact | Opt in |
+| [`callback.created`](#callback-created) | A callback was scheduled | Opt in |
+| [`meeting.created`](#meeting-created) | A meeting was scheduled | Opt in |
+| [`recording.ready`](#recording-ready) | A recording finished processing | Opt in |
+| [`dnc.created`](#dnc-created) | A number was added to Do Not Call | Opt in |
+| [`test.ping`](#test-ping) | You click **Test webhook** | Always |
+
+Select which events you receive in **Integrations → Custom Integrations → Configure → Settings**.
+
+## Shared entity references
+
+Several events embed the same nested objects.
+
+| Object | Shape |
+|---|---|
+| `data.contact` | `{ id, externalId?, phoneNumber, fullName?, email? }` |
+| `data.company` | `{ id, externalId?, name }` |
+| `data.user` | `{ id, email?, fullName? }` |
+
+`externalId` is present when the record was linked through [`contact.upserted`](/api/inbound-events#contact-upserted) or [`company.upserted`](/api/inbound-events#company-upserted). Use it as your primary join key and fall back to `phoneNumber`.
+
+---
+
+## `call.completed`
+
+A call has technically ended, regardless of whether anyone recorded an outcome yet.
+
+**Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.status`, `data.direction`, `data.endedAt`
+
+<ResponseField name="data.callId" type="string" required>Ringee call UUID. Use it as the unique key for the activity in your CRM.</ResponseField>
+<ResponseField name="data.fromNumber" type="string" required>Originating E.164 number.</ResponseField>
+<ResponseField name="data.toNumber" type="string" required>Destination E.164 number.</ResponseField>
+<ResponseField name="data.status" type="string" required>Final call status reported by the carrier.</ResponseField>
+<ResponseField name="data.direction" type="string" required>`inbound` or `outbound`.</ResponseField>
+<ResponseField name="data.endedAt" type="string (ISO-8601)" required>When the call ended.</ResponseField>
+<ResponseField name="data.startedAt" type="string (ISO-8601)">When the call was initiated.</ResponseField>
+<ResponseField name="data.answeredAt" type="string (ISO-8601)">When the call was answered.</ResponseField>
+<ResponseField name="data.durationSeconds" type="number">Total billed duration.</ResponseField>
+<ResponseField name="data.recordingStatus" type="string">`pending`, `ready` or `unavailable`.</ResponseField>
+<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
+<ResponseField name="data.company" type="object">Company reference.</ResponseField>
+<ResponseField name="data.user" type="object">Ringee user who handled the call.</ResponseField>
+
+```json
+{
+  "event": "call.completed",
+  "eventId": "evt_01HX5ZBN7Y0Q3S4M2K1WJ8V5DC",
+  "occurredAt": "2026-05-23T14:42:18.000Z",
+  "workspaceId": "org_2k7yX…",
+  "integrationId": "ci_…",
+  "data": {
+    "callId": "f3b1…",
+    "fromNumber": "+14155550100",
+    "toNumber": "+14155550123",
+    "status": "completed",
+    "direction": "outbound",
+    "durationSeconds": 142,
+    "startedAt": "2026-05-23T14:39:56.000Z",
+    "endedAt": "2026-05-23T14:42:18.000Z",
+    "contact": {
+      "id": "…",
+      "externalId": "ext_contact_42",
+      "phoneNumber": "+14155550123"
+    }
+  }
+}
+```
+
+<Warning>
+This event does **not** include the outcome. Outcomes arrive separately via `call.outcome.updated`, and may never arrive if the user never records one.
+</Warning>
+
+---
+
+## `call.outcome.updated`
+
+A user recorded or changed the outcome of a call. This can happen well after `call.completed`.
+
+**Required:** `data.callId`, `data.outcome`, `data.updatedAt`
+
+<ResponseField name="data.callId" type="string" required>Ringee call UUID — match it against an existing activity.</ResponseField>
+<ResponseField name="data.outcome" type="string" required>The `CallOutcome` value, for example `sale`, `interested`, `meeting_booked`, `voicemail`, `no_answer`.</ResponseField>
+<ResponseField name="data.updatedAt" type="string (ISO-8601)" required>When the outcome was set.</ResponseField>
+<ResponseField name="data.outcomeNote" type="string">Free-text note attached to the outcome.</ResponseField>
+<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
+<ResponseField name="data.company" type="object">Company reference.</ResponseField>
+<ResponseField name="data.user" type="object">User who recorded the outcome.</ResponseField>
+
+```json
+{
+  "event": "call.outcome.updated",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T14:50:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "callId": "f3b1…",
+    "outcome": "meeting_booked",
+    "outcomeNote": "Demo scheduled for next Tuesday",
+    "updatedAt": "2026-05-23T14:50:00.000Z"
+  }
+}
+```
+
+<Note>
+Update the existing activity — never create a second one. When the outcome is `meeting_booked`, a separate `meeting.created` event also fires.
+</Note>
+
+---
+
+## `call.missed`
+
+An inbound call arrived but nobody picked up.
+
+**Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.occurredAt`
+
+<ResponseField name="data.reason" type="string">Carrier-provided reason.</ResponseField>
+<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
+<ResponseField name="data.company" type="object">Company reference.</ResponseField>
+<ResponseField name="data.user" type="object">User reference.</ResponseField>
+
+```json
+{
+  "event": "call.missed",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:20:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "callId": "c_…",
+    "fromNumber": "+14155550123",
+    "toNumber": "+14155550100",
+    "occurredAt": "2026-05-23T15:20:00.000Z"
+  }
+}
+```
+
+For missed calls, resolve the contact primarily from `fromNumber`.
+
+---
+
+## `call.failed`
+
+The telephony stack reported a hard failure — busy, invalid number, network error.
+
+**Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.occurredAt`
+
+<ResponseField name="data.errorCode" type="string">Carrier error code, for example `USER_BUSY`.</ResponseField>
+<ResponseField name="data.errorMessage" type="string">Human-readable description.</ResponseField>
+<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
+<ResponseField name="data.company" type="object">Company reference.</ResponseField>
+<ResponseField name="data.user" type="object">User reference.</ResponseField>
+
+```json
+{
+  "event": "call.failed",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:25:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "callId": "c_…",
+    "fromNumber": "+14155550100",
+    "toNumber": "+14155550123",
+    "occurredAt": "2026-05-23T15:25:00.000Z",
+    "errorCode": "USER_BUSY"
+  }
+}
+```
+
+---
+
+## `note.created`
+
+**Required:** `data.noteId`, `data.contact`, `data.content`, `data.createdAt`
+
+<ResponseField name="data.createdBy" type="object">User who wrote the note.</ResponseField>
+
+```json
+{
+  "event": "note.created",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:00:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "noteId": "n_…",
+    "contact": {
+      "id": "…",
+      "externalId": "ext_contact_42",
+      "phoneNumber": "+14155550123"
+    },
+    "content": "Prefers email follow-up.",
+    "createdAt": "2026-05-23T15:00:00.000Z"
+  }
+}
+```
+
+---
+
+## `callback.created`
+
+**Required:** `data.callbackId`, `data.contact`, `data.scheduledAt`, `data.status`, `data.createdAt`
+
+<ResponseField name="data.call" type="object">Originating call reference.</ResponseField>
+<ResponseField name="data.note" type="string">Free-text note.</ResponseField>
+<ResponseField name="data.user" type="object">User who scheduled it.</ResponseField>
+
+```json
+{
+  "event": "callback.created",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:05:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "callbackId": "cb_…",
+    "contact": {
+      "id": "…",
+      "externalId": "ext_contact_42",
+      "phoneNumber": "+14155550123"
+    },
+    "scheduledAt": "2026-05-24T10:00:00.000Z",
+    "status": "pending",
+    "createdAt": "2026-05-23T15:05:00.000Z"
+  }
+}
+```
+
+---
+
+## `meeting.created`
+
+Fires when a user schedules a meeting. Independent of outcomes — if the outcome is `meeting_booked`, both `call.outcome.updated` and `meeting.created` fire.
+
+**Required:** `data.meetingId`, `data.contact`, `data.scheduledAt`, `data.status`, `data.createdAt`
+
+<ResponseField name="data.title" type="string">Meeting title.</ResponseField>
+<ResponseField name="data.duration" type="number">Duration in minutes.</ResponseField>
+<ResponseField name="data.location" type="string">Physical location or video link.</ResponseField>
+<ResponseField name="data.notes" type="string">Notes.</ResponseField>
+<ResponseField name="data.externalEventId" type="string">Calendar provider event id, when synced to Google or Microsoft.</ResponseField>
+<ResponseField name="data.call" type="object">Originating call reference.</ResponseField>
+<ResponseField name="data.user" type="object">User reference.</ResponseField>
+
+```json
+{
+  "event": "meeting.created",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:10:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "meetingId": "m_…",
+    "contact": {
+      "id": "…",
+      "externalId": "ext_contact_42",
+      "phoneNumber": "+14155550123"
+    },
+    "scheduledAt": "2026-05-30T16:00:00.000Z",
+    "status": "scheduled",
+    "title": "Demo with Babbage Engines",
+    "duration": 30,
+    "createdAt": "2026-05-23T15:10:00.000Z"
+  }
+}
+```
+
+---
+
+## `recording.ready`
+
+The recording has been processed and is downloadable.
+
+**Required:** `data.recordingId`, `data.callId`, `data.url`, `data.createdAt`
+
+<ResponseField name="data.url" type="string" required>Signed URL to the recording.</ResponseField>
+<ResponseField name="data.format" type="string">Audio container, for example `mp3` or `wav`.</ResponseField>
+<ResponseField name="data.durationSec" type="number">Duration in seconds.</ResponseField>
+<ResponseField name="data.transcript" type="string">Plain-text transcript, when available.</ResponseField>
+
+```json
+{
+  "event": "recording.ready",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T14:43:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "recordingId": "r_…",
+    "callId": "f3b1…",
+    "url": "https://recordings.ringee.app/…",
+    "format": "mp3",
+    "durationSec": 142,
+    "createdAt": "2026-05-23T14:43:00.000Z"
+  }
+}
+```
+
+<Warning>
+Attach the recording to the activity matched by `callId`, and protect the URL behind your CRM's existing access policies. Never expose recordings across organizations.
+</Warning>
+
+---
+
+## `dnc.created`
+
+A phone number or contact was added to the Do Not Call list.
+
+**Required:** `data.phoneNumber`, `data.createdAt`
+
+<ResponseField name="data.reason" type="string">Free-text reason.</ResponseField>
+<ResponseField name="data.source" type="string">Channel that triggered the addition.</ResponseField>
+<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
+<ResponseField name="data.user" type="object">User reference.</ResponseField>
+
+```json
+{
+  "event": "dnc.created",
+  "eventId": "evt_…",
+  "occurredAt": "2026-05-23T15:30:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": {
+    "phoneNumber": "+14155550123",
+    "createdAt": "2026-05-23T15:30:00.000Z"
+  }
+}
+```
+
+On receipt, mark the contact as Do Not Call and disable your **Call with Ringee** button for it.
+
+---
+
+## `test.ping`
+
+Sent when you click **Test webhook**. Use it to validate signature verification end to end.
+
+```json
+{
+  "event": "test.ping",
+  "eventId": "evt_test_1747999938000",
+  "occurredAt": "2026-05-23T14:00:00.000Z",
+  "workspaceId": "org_…",
+  "integrationId": "ci_…",
+  "data": { "message": "Hello from Ringee custom integrations." }
+}
+```
+
+Respond `200` with:
+
+```json
+{ "received": true, "event": "test.ping" }
+```
+
+## Machine-readable spec
+
+The same definitions are available at runtime:
+
+```http
+GET /api/integrations/custom/event-specs
+```
+
+It returns each event's `requiredFields`, `optionalFields`, `examplePayload` and `notes` — useful for generating types or validating your handler in CI.

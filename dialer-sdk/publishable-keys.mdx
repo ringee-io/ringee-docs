@@ -1,0 +1,123 @@
+---
+title: Publishable keys
+description: 'Create and scope the pk_live key that authorizes your installation'
+---
+
+A publishable key (`pk_live_…`) identifies a Dialer SDK **installation** and the origins allowed to load it. It is browser-safe by design — it embeds no secret and authenticates no agent.
+
+## Create one from the dashboard
+
+Custom Integrations are available to organization admins and to personal accounts with administrative access.
+
+<Steps>
+<Step title="Open Custom Integrations">
+
+Sign in to Ringee, open **Integrations** from the sidebar (`/dashboard/settings/integrations`), and select the **Custom Integrations** tab.
+
+</Step>
+
+<Step title="Create or open an integration">
+
+Click **New custom integration**, name it something like `My CRM`, and click **Create**. If one already exists, open its card with **Configure**.
+
+</Step>
+
+<Step title="Add allowed origins">
+
+Open **Settings**, find **Dialer SDK · Publishable keys**, and under **Allowed origins** enter the complete origin that will load the SDK — for example `https://crm.example.com`. Click **Add** and repeat for every environment.
+
+For the local playground, use the **localhost:5173 (playground)** shortcut. **This dashboard** adds the origin of the Ringee dashboard you have open — use it only if the SDK will run from that same origin, not for an external CRM.
+
+</Step>
+
+<Step title="Generate and copy the key">
+
+Review the origin list, click **Generate publishable key**, and copy the `pk_live_…` value. Pass it to the SDK as `key`.
+
+</Step>
+</Steps>
+
+<Note>
+When an integration is created, Ringee also shows a `cik_live_…` API key and a webhook signing secret. Those belong to the [Public API](/api/overview) and are **not** Dialer SDK keys — never put them in frontend code.
+</Note>
+
+## Origins are matched exactly
+
+An origin is scheme + host + optional port. Nothing else.
+
+```text
+https://crm.example.com
+http://localhost:5173
+```
+
+| Configured | Does **not** allow |
+|---|---|
+| `https://crm.example.com` | `http://crm.example.com` |
+| `https://crm.example.com` | `https://app.crm.example.com` |
+| `http://localhost:5173` | `http://localhost:3000` |
+
+Paths, query strings, credentials, fragments and wildcards are rejected. Every scheme/host/port combination must be added explicitly.
+
+<Warning>
+Existing publishable keys are **not** edited when you change the origin list. Generate a new key after adding an origin.
+</Warning>
+
+## Key types
+
+| Key | Used by | Safe in frontend? |
+|---|---|---|
+| `pk_live_…` | Dialer SDK | **Yes** |
+| `cik_live_…` | [Public API](/api/authentication) | No |
+| `whsec_…` | Webhook signature verification | No |
+
+## Lifecycle
+
+- The dashboard shows the generated value so you can copy it immediately. Store it in your project configuration.
+- Lost it, or need a different origin list? Generate a new one.
+- **Rotating the `cik_live_` API key revokes every publishable key** on that integration.
+- **Disabling the integration** invalidates them too.
+
+## Create one programmatically
+
+For automation or self-hosting, an authenticated admin client can do the same thing:
+
+```http
+POST /api/integrations/custom/<integrationId>/publishable-keys
+Authorization: Bearer <admin-session>
+Content-Type: application/json
+
+{
+  "allowedOrigins": [
+    "https://crm.example.com",
+    "http://localhost:5173"
+  ]
+}
+```
+
+```json
+{
+  "publishableKey": "pk_live_xxxxx",
+  "integrationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "apiKeyPrefix": "cik_live_a1b2c3d4",
+  "allowedOrigins": ["https://crm.example.com", "http://localhost:5173"]
+}
+```
+
+`allowedOrigins` is required and must contain at least one origin.
+
+## What the key does not do
+
+A publishable key does **not** identify or authenticate an agent. Ringee verifies agent identity with an email one-time code, then validates workspace membership, calling permissions, caller ID, credit and Do Not Call server-side on every call.
+
+That is why shipping `pk_live_…` in your bundle is safe. See [Security](/dialer-sdk/security).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/dialer-sdk/quickstart">
+    Use the key to place your first call
+  </Card>
+  <Card title="Troubleshooting" icon="bug" href="/dialer-sdk/troubleshooting">
+    `DOMAIN_NOT_ALLOWED` and friends
+  </Card>
+</CardGroup>

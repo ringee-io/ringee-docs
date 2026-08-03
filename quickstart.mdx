@@ -37,8 +37,8 @@ docker-compose -f docker-compose.app.yml up --build -d
 
 Then open:
 
-- **Admin frontend** → [http://localhost:4200](http://localhost:4200)
-- **Consumer frontend** → [http://localhost:4201](http://localhost:4201)
+- **Frontend** → [http://localhost:4200](http://localhost:4200)
+- **Backend API** → [http://localhost:3000/api](http://localhost:3000/api)
 
 <Warning>
 You **must** configure your API keys in the `.env` file before running. See the [Configuration Reference](/configuration/reference) for details on each variable.
@@ -52,5 +52,11 @@ You **must** configure your API keys in the `.env` file before running. See the 
   </Card>
   <Card title="Telnyx Setup" icon="phone" href="/providers/telnyx">
     Configure your telephony provider
+  </Card>
+  <Card title="Build on Ringee" icon="puzzle-piece" href="/build-on-ringee">
+    API, SDK, MCP and CLI — which one you need
+  </Card>
+  <Card title="How it works" icon="diagram-project" href="/howitworks">
+    The architecture behind Ringee
   </Card>
 </CardGroup>

@@ -59,6 +59,18 @@ A random string used for encrypting sensitive data at the application level. Sho
 
 ---
 
+### Background jobs (Temporal)
+
+The orchestrator (`apps/orchestrator`) runs durable workflows and schedules. Both the backend and the orchestrator read these.
+
+| Variable | Description |
+|---|---|
+| `TEMPORAL_ADDRESS` | Temporal server address (default: `localhost:7233`) |
+| `TEMPORAL_NAMESPACE` | Temporal namespace (default: `default`) |
+| `TEMPORAL_TASK_QUEUE` | Task queue name (default: `ringee`) |
+
+---
+
 ### Authentication (Clerk)
 
 See the [Clerk Configuration](/configuration/clerk) guide for setup details.
@@ -155,3 +167,13 @@ See the [R2 Configuration](/configuration/r2) guide for details.
 | Variable | Description |
 |---|---|
 | `OPENAI_API_KEY` | OpenAI API key (used for AI features) |
+
+### MCP and AI assistants
+
+Only needed for the authenticated ChatGPT connector. The public MCP endpoints work with no extra configuration — see [Connect a client](/mcp/connect).
+
+| Variable | Description |
+|---|---|
+| `MCP_OAUTH_AUTHORIZATION_SERVERS` | OAuth authorization server(s) advertised to ChatGPT — your Clerk issuer. Comma-separated |
+| `MCP_OAUTH_SCOPES` | Scopes advertised (default: `ringee:use`) |
+| `OPENAI_APPS_CHALLENGE_TOKEN` | Domain-verification token served at `/.well-known/openai-apps-challenge` |

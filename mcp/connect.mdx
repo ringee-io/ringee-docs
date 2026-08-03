@@ -1,0 +1,159 @@
+---
+title: Connect a client
+description: 'Get your Ringee MCP URL and wire it into Claude, ChatGPT or Cursor'
+---
+
+## Get your MCP URL
+
+While signed in to Ringee, call:
+
+```http
+GET /api/mcp/connection-info
+```
+
+```json
+{
+  "mode": "organization",
+  "userId": "a91c…",
+  "organizationId": "org_2k7yX…",
+  "url": "https://api.ringee.io/api/mcp/a91c…/org_2k7yX…/sse"
+}
+```
+
+The URL matches your currently active workspace:
+
+| Mode | URL shape |
+|---|---|
+| Personal | `https://api.ringee.io/api/mcp/<userId>/sse` |
+| Organization | `https://api.ringee.io/api/mcp/<userId>/<organizationId>/sse` |
+
+<Note>
+Either URL works from any client — the assistant can move between workspaces at runtime with `switch_workspace`. See [Workspaces](/mcp/workspaces).
+</Note>
+
+<Warning>
+This URL is a credential. Anyone holding it can read and modify that workspace's contacts, calls and sessions. Do not share it, and generate connection info again if you believe it leaked.
+</Warning>
+
+## Transport
+
+The endpoint speaks MCP over **SSE**:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/mcp/:userId/sse` | Open the event stream |
+| `POST` | `/api/mcp/:userId/messages?sessionId=…` | Send JSON-RPC messages |
+
+The org-scoped form adds `/:organizationId` before `/sse` and `/messages`. The `messages` endpoint requires the `sessionId` the stream handed you.
+
+## Claude Desktop and claude.ai
+
+<Tabs>
+<Tab title="claude.ai">
+
+1. Open **Settings → Connectors → Add custom connector**.
+2. Paste your MCP URL.
+3. Save, then start a chat and ask Claude to list your Ringee contacts.
+
+The server must be reachable from the public internet — `localhost` will not work.
+
+</Tab>
+
+<Tab title="Claude Desktop">
+
+Add the server to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "ringee": {
+      "url": "https://api.ringee.io/api/mcp/<userId>/sse"
+    }
+  }
+}
+```
+
+Restart Claude Desktop and confirm the Ringee tools appear in the tools list.
+
+</Tab>
+
+<Tab title="Claude Code">
+
+```bash
+claude mcp add --transport sse ringee https://api.ringee.io/api/mcp/<userId>/sse
+```
+
+Or install the full Ringee plugin, which bundles the MCP server and the `/ringee` skill commands — see [Apps and skills](/mcp/apps).
+
+</Tab>
+
+<Tab title="Cursor">
+
+Add the server under **Settings → MCP**, using the same SSE URL. Cursor discovers the tool list automatically once the stream connects.
+
+</Tab>
+</Tabs>
+
+## ChatGPT
+
+ChatGPT connectors require OAuth, so they use a different, id-free endpoint:
+
+```
+https://api.ringee.io/api/mcp/chatgpt/sse
+```
+
+This endpoint resolves the caller from a verified bearer token instead of trusting ids in the URL, so every end user reaches only their own data. It publishes RFC 9728 protected-resource metadata for discovery:
+
+```http
+GET /api/mcp/chatgpt/.well-known/oauth-protected-resource
+```
+
+Self-hosted deployments configure the authorization server with:
+
+| Variable | Purpose |
+|---|---|
+| `MCP_OAUTH_AUTHORIZATION_SERVERS` | Your Clerk issuer (comma-separated if more than one) |
+| `MCP_OAUTH_SCOPES` | Scopes advertised — defaults to `ringee:use` |
+| `OPENAI_APPS_CHALLENGE_TOKEN` | Domain-verification token served at `/.well-known/openai-apps-challenge` |
+
+<Info>
+OpenAI issues a **distinct** verification token per origin. The backend (`api.ringee.io`) and a separately deployed ChatGPT MCP server each need their own.
+</Info>
+
+## Verify the connection
+
+The fastest check is the [`ringee` CLI](/cli/overview), which connects to the same server:
+
+```bash
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/sse"
+ringee config check
+```
+
+It connects and prints every tool the server exposes. If that works, any MCP client will too.
+
+You can also use the MCP Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+## Self-hosting
+
+Point clients at your own backend instead:
+
+```
+https://ringee-api.example.com/api/mcp/<userId>/sse
+```
+
+The URL is built from `BACKEND_URL`, so make sure that variable is the **public** URL of your API — see the [Configuration reference](/configuration/reference).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tool reference" icon="list" href="/mcp/tools">
+    Everything the assistant can call
+  </Card>
+  <Card title="Safety" icon="shield-check" href="/mcp/safety">
+    How destructive and credit-spending actions are guarded
+  </Card>
+</CardGroup>

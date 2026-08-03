@@ -1,0 +1,81 @@
+---
+title: Workspaces
+description: 'How personal and organization scoping works over MCP'
+---
+
+Every read and write through MCP is scoped to exactly one **workspace**: the user's personal account, or one organization they belong to.
+
+## Why this exists
+
+A Ringee user often has both a personal account and membership in one or more organizations. Contacts, calls, sessions and leads live in one of those scopes — never both. Without an explicit active workspace, an assistant asked to "find my contacts" cannot know which set to search.
+
+## The active workspace
+
+The MCP connection starts in the workspace encoded in your URL:
+
+| URL | Starting workspace |
+|---|---|
+| `/api/mcp/<userId>/sse` | Personal |
+| `/api/mcp/<userId>/<organizationId>/sse` | That organization |
+
+From there the assistant can move freely:
+
+```text
+list_workspaces   → see every option and which one is active
+switch_workspace  → change it
+```
+
+<Info>
+Switching takes effect for **subsequent** requests. It is persisted server-side, so it survives across sessions and clients until it is changed again.
+</Info>
+
+## Typical exchange
+
+```text
+User:      How many contacts do I have at Acme?
+Assistant: (list_workspaces) You have a personal account and two organizations:
+           Acme Sales and Northwind. You're currently in your personal account.
+           Switching to Acme Sales…
+           (switch_workspace → "Acme Sales")
+           (search_contacts "*")
+           Acme Sales has 1,284 contacts.
+```
+
+`switch_workspace` accepts an organization id or an exact, case-insensitive organization name, so the assistant can pass what the user actually said. Pass `personal` to return to the personal account.
+
+<Note>
+The id is resolved against the user's real memberships. An id the user does not belong to is rejected — an assistant cannot switch into a workspace the user has no access to.
+</Note>
+
+## What scoping affects
+
+| Area | Behavior |
+|---|---|
+| Contacts | Searches, creates and updates apply only to the active workspace. |
+| Calls | `list_calls` returns that workspace's calls only. |
+| Call sessions | Created under the active workspace, and only its sessions can be read or revoked. |
+| Leads | Search jobs, reveals and imports belong to the active workspace. |
+| Caller IDs and credits | Resolved from the active workspace. |
+
+## Organization roles
+
+Ringee organizations have roles (admin, member, freelancer) that gate parts of the product. MCP goes through the same service layer as the dashboard, so those rules apply identically — an action the user cannot perform in the UI fails over MCP too.
+
+## Duplicate contacts across workspaces
+
+Phone-number uniqueness is enforced **within** a workspace, not across them. The same person can exist as a contact in your personal account and in an organization; they are separate records with separate call histories.
+
+<Tip>
+If an assistant reports "contact already exists" for a number you cannot find, check the active workspace first — you are probably looking at a different one.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tool reference" icon="list" href="/mcp/tools">
+    `list_workspaces` and `switch_workspace` parameters
+  </Card>
+  <Card title="Safety" icon="shield-check" href="/mcp/safety">
+    Confirmation rules for sensitive actions
+  </Card>
+</CardGroup>

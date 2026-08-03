@@ -1,0 +1,211 @@
+---
+title: Inbound events
+description: 'Push contacts and companies from your CRM into Ringee'
+---
+
+Send everything your CRM knows about a contact or company to a single Ringee endpoint. Ringee upserts the record, links it to your `externalId`, and makes it callable.
+
+```http
+POST /api/integrations/custom/webhook
+Content-Type: application/json
+X-Ringee-Api-Key: cik_live_…
+```
+
+The endpoint returns **202 Accepted** for any well-formed, authenticated request. The real result is in the JSON body — always read it.
+
+## Envelope
+
+<ParamField body="event" type="string" required>
+  One of `contact.upserted`, `company.upserted`, `contact.deleted`, `company.deleted`.
+</ParamField>
+
+<ParamField body="eventId" type="string" required>
+  Unique, stable id for this event. Ringee deduplicates on it. Prefix your own ids, for example `crm_<UUID>`.
+</ParamField>
+
+<ParamField body="occurredAt" type="string (ISO-8601)" required>
+  When the change happened in your system.
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  The event payload. Fields depend on the event type.
+</ParamField>
+
+## Response
+
+```json
+{ "status": "processed", "eventId": "crm_9f1c2a7e" }
+```
+
+| `status` | Meaning | What to do |
+|---|---|---|
+| `processed` | The event was applied. | Mark the sync as successful. |
+| `skipped` | Duplicate `eventId`. Already applied earlier. | Treat as success. |
+| `failed` | The event was accepted but could not be applied. | Show `message`, mark as a sync failure, fix and resend with a **new** `eventId`. |
+
+<Warning>
+A `202` status code only means the transport was accepted. Do not treat it as a successful sync without checking `status` in the body.
+</Warning>
+
+## `contact.upserted`
+
+Create or update a contact from your CRM's current state.
+
+<ParamField body="data.externalId" type="string" required>
+  Stable id of the contact in your system. This is the join key for every later event.
+</ParamField>
+
+<ParamField body="data.phoneNumber" type="string" required>
+  Phone in any format; normalized to E.164 when possible. Required because Ringee must be able to dial the contact.
+</ParamField>
+
+<ParamField body="data.firstName" type="string">Given name.</ParamField>
+<ParamField body="data.lastName" type="string">Family name.</ParamField>
+<ParamField body="data.fullName" type="string">Pre-composed full name.</ParamField>
+<ParamField body="data.name" type="string">Display name.</ParamField>
+<ParamField body="data.email" type="string">Primary email.</ParamField>
+<ParamField body="data.companyExternalId" type="string">External company id to link this contact to.</ParamField>
+<ParamField body="data.companyName" type="string">Fallback company name when no `companyExternalId` is provided.</ParamField>
+<ParamField body="data.jobTitle" type="string">Position or title.</ParamField>
+<ParamField body="data.ownerExternalId" type="string">External owner id (sales rep).</ParamField>
+<ParamField body="data.ownerEmail" type="string">Owner email — resolves to a Ringee user when the integration is organization-scoped.</ParamField>
+<ParamField body="data.source" type="string">Lead source label.</ParamField>
+<ParamField body="data.customFields" type="object">Arbitrary key/value pairs stored on the contact.</ParamField>
+<ParamField body="data.crmMetadata" type="object">Provider-specific metadata stored on the contact.</ParamField>
+
+```json
+{
+  "event": "contact.upserted",
+  "eventId": "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T",
+  "occurredAt": "2026-05-23T14:30:00.000Z",
+  "data": {
+    "externalId": "ext_contact_42",
+    "phoneNumber": "+14155550123",
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "email": "ada@example.com",
+    "companyExternalId": "ext_company_7",
+    "jobTitle": "Founder",
+    "ownerEmail": "rep@example.com",
+    "customFields": { "tier": "vip" }
+  }
+}
+```
+
+<Note>
+**Deduplication order:** `externalId` first, then `phoneNumber` within the same workspace. Sending `null`, `undefined` or empty strings does **not** overwrite existing values — omit a field to leave it untouched.
+</Note>
+
+## `company.upserted`
+
+<ParamField body="data.externalId" type="string" required>
+  Stable id of the company in your system.
+</ParamField>
+
+<ParamField body="data.name" type="string" required>
+  Display name.
+</ParamField>
+
+<ParamField body="data.legalName" type="string">Registered legal name.</ParamField>
+<ParamField body="data.domain" type="string">Primary web domain — used as a secondary dedup signal.</ParamField>
+<ParamField body="data.industry" type="string">Industry label.</ParamField>
+<ParamField body="data.size" type="string">Headcount band, for example `11-50`.</ParamField>
+<ParamField body="data.phone" type="string">Main phone.</ParamField>
+<ParamField body="data.website" type="string">Homepage URL.</ParamField>
+<ParamField body="data.source" type="string">Source label.</ParamField>
+<ParamField body="data.customFields" type="object">Arbitrary key/value pairs.</ParamField>
+<ParamField body="data.crmMetadata" type="object">Provider-specific metadata.</ParamField>
+
+```json
+{
+  "event": "company.upserted",
+  "eventId": "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA",
+  "occurredAt": "2026-05-23T14:30:05.000Z",
+  "data": {
+    "externalId": "ext_company_7",
+    "name": "Babbage Engines Ltd.",
+    "domain": "babbage.example.com",
+    "industry": "Hardware",
+    "size": "11-50"
+  }
+}
+```
+
+<Note>
+**Deduplication order:** `externalId`, then `domain` within the same workspace.
+</Note>
+
+## `contact.deleted`
+
+Marks the contact as archived in Ringee.
+
+<ParamField body="data.externalId" type="string" required>
+  The external contact id you previously sent in `contact.upserted`.
+</ParamField>
+
+```json
+{
+  "event": "contact.deleted",
+  "eventId": "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC",
+  "occurredAt": "2026-05-23T14:35:00.000Z",
+  "data": { "externalId": "ext_contact_42" }
+}
+```
+
+<Info>
+Ringee never deletes the underlying contact. Call history, notes, callbacks and meetings are preserved — only the integration's link is archived. Re-sending `contact.upserted` with the same `externalId` un-archives it.
+</Info>
+
+## `company.deleted`
+
+<ParamField body="data.externalId" type="string" required>
+  The external company id you previously sent in `company.upserted`.
+</ParamField>
+
+```json
+{
+  "event": "company.deleted",
+  "eventId": "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K",
+  "occurredAt": "2026-05-23T14:35:30.000Z",
+  "data": { "externalId": "ext_company_7" }
+}
+```
+
+## Sending events well
+
+<AccordionGroup>
+<Accordion title="Do not send on every render or save">
+
+Sync only when a field Ringee cares about actually changes: name, phone, email, company, job title, owner. Sending an event on every UI update wastes quota and makes your logs unreadable.
+
+</Accordion>
+
+<Accordion title="Use E.164 phone numbers">
+
+Ringee normalizes what it can, but `+14155550123` always wins over `(415) 555-0123`. A number Ringee cannot normalize may fail dedup against an existing contact.
+
+</Accordion>
+
+<Accordion title="Never re-send what Ringee wrote">
+
+If your CRM record was created or updated by a Ringee webhook, do not send it back. Store a `sync_origin` marker on those rows and skip them. See [Build an integration](/api/build-an-integration#prevent-sync-loops).
+
+</Accordion>
+
+<Accordion title="Queue before you send">
+
+Write the event to a local outbox table first, then attempt delivery. A contact save in your CRM should never fail because Ringee is momentarily unreachable.
+
+</Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Click-to-call" icon="phone" href="/api/click-to-call">
+    Open a secure dialer for a synced contact
+  </Card>
+  <Card title="Outbound webhooks" icon="webhook" href="/api/outbound-webhooks">
+    Receive call activity back in your CRM
+  </Card>
+</CardGroup>

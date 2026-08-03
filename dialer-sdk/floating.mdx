@@ -1,0 +1,137 @@
+---
+title: Floating
+description: 'A launcher in the page corner that opens a complete dialer panel'
+---
+
+Floating mounts a launcher in a corner of the page. The panel handles agent sign-in, caller ID selection, number entry and in-call controls — nothing else to build.
+
+## CDN
+
+No build step required.
+
+```html
+<script src="https://unpkg.com/@ringee/dialer-sdk"></script>
+<script>
+  const ringee = Ringee.mount({
+    key: "pk_live_xxxxx",
+    locale: "en",
+    side: "right",
+  });
+</script>
+```
+
+`Ringee.mount(options)` is an alias for `Ringee.createFloating(options)`.
+
+Pin a version in production:
+
+```html
+<script src="https://unpkg.com/@ringee/dialer-sdk@0.1.1/dist/ringee.global.js"></script>
+```
+
+## npm
+
+```ts
+import { createFloating } from "@ringee/dialer-sdk/ui";
+
+const ringee = createFloating({
+  key: "pk_live_xxxxx",
+  agentEmail: currentUser.email,
+  locale: "en",
+  side: "right",
+  defaultOpen: false,
+  rememberOpen: true,
+  allowHold: true,
+});
+```
+
+The UI calls `initialize()` for you. `agentEmail` only prefills the email field — Ringee always requires the agent to prove access to that address via one-time code.
+
+## Options
+
+Floating accepts every [common option](/dialer-sdk/reference#common-ui-options) plus:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `side` | `"left" \| "right"` | `"right"` | Which side the launcher sits on |
+| `defaultOpen` | `boolean` | `false` | Open the panel on mount |
+| `rememberOpen` | `boolean` | `true` | Remember the open state within the tab |
+| `container` | `HTMLElement` | `document.body` | Shadow DOM parent |
+
+## Control it from your app
+
+```ts
+ringee.open();
+ringee.close();
+ringee.toggle();
+
+ringee.setContact({
+  name: "Morgan Reed",
+  number: "+13055550142",
+  externalContactId: "crm-contact-294",
+});
+
+ringee.startCall({
+  to: "+13055550142",
+  name: "Morgan Reed",
+  externalContactId: "crm-contact-294",
+});
+```
+
+<Note>
+`startCall()` is safe to call before session restoration finishes. The controller keeps the requested call and places it once the dialer reaches `ready`. If the agent is not authenticated, the OTP flow appears first.
+</Note>
+
+## Wiring it to a contact record
+
+```ts
+// When the user opens a contact
+ringee.setContact({
+  name: contact.fullName,
+  number: contact.phone,
+  imageUrl: contact.avatarUrl,
+  externalContactId: contact.id,
+});
+
+// When they click "Call"
+callButton.addEventListener("click", () => {
+  ringee.startCall({ to: contact.phone, externalContactId: contact.id });
+});
+```
+
+<Warning>
+Start calls from a real click or tap. Browsers block audio playback that was not triggered by a user gesture — auto-dialing on page load produces `AUDIO_PLAYBACK_BLOCKED`.
+</Warning>
+
+## React to call state
+
+The controller forwards the headless events:
+
+```ts
+ringee.on("answered", ({ call }) => startTimer(call.answeredAt));
+ringee.on("ended", ({ call }) => logActivity(call));
+ringee.on("failed", ({ error }) => toast(error.message));
+```
+
+Full list: [Events](/dialer-sdk/reference#events).
+
+## Clean up
+
+```ts
+ringee.destroy();              // removes the UI
+await ringee.dialer.destroy(); // releases WebRTC, audio and the call lock
+```
+
+<Warning>
+`destroy()` on the controller only unmounts the visual surface. Destroy the underlying dialer too, or WebRTC stays connected.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Theming" icon="palette" href="/dialer-sdk/theming">
+    Match your product's look
+  </Card>
+  <Card title="React and Next.js" icon="react" href="/dialer-sdk/react">
+    Mount and unmount safely in a component
+  </Card>
+</CardGroup>

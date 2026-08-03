@@ -1,0 +1,320 @@
+---
+title: Tool reference
+description: 'Every tool the Ringee MCP server exposes'
+---
+
+The Ringee MCP server exposes 19 tools. Each is annotated with MCP trust hints so clients can decide when to ask for confirmation.
+
+| Tool | Type | Spends credits |
+|---|---|---|
+| [`list_workspaces`](#list-workspaces) | Read | No |
+| [`switch_workspace`](#switch-workspace) | Write | No |
+| [`search_contacts`](#search-contacts) | Read | No |
+| [`get_contact`](#get-contact) | Read | No |
+| [`find_contacts_by_outcome`](#find-contacts-by-outcome) | Read | No |
+| [`list_calls`](#list-calls) | Read | No |
+| [`create_contact`](#create-contact) | Write | No |
+| [`update_contact`](#update-contact) | Write | No |
+| [`delete_contact`](#delete-contact) | **Destructive** | No |
+| [`log_call_outcome`](#log-call-outcome) | Write | No |
+| [`create_callback`](#create-callback) | Write | No |
+| [`schedule_meeting`](#schedule-meeting) | Write | No |
+| [`create_call_session`](#create-call-session) | **Sensitive** | No |
+| [`get_call_session`](#get-call-session) | Read | No |
+| [`update_call_session`](#update-call-session) | Write | No |
+| [`delete_call_session`](#delete-call-session) | **Destructive** | No |
+| [`search_leads`](#search-leads) | Read | Provider only |
+| [`reveal_lead`](#reveal-lead) | **Sensitive** | Provider only |
+| [`import_leads_as_contacts`](#import-leads-as-contacts) | Write | No |
+
+<Note>
+No MCP tool ever debits Ringee calling credits. `search_leads` and `reveal_lead` consume the allowance of your connected enrichment provider (Apollo or Prospeo).
+</Note>
+
+## Conventions
+
+- Phone numbers are **E.164**: `+14155552671`.
+- Dates and times are **ISO-8601 with a timezone offset**: `2026-05-23T14:30:00-04:00`.
+- Ids are UUIDs returned by other tools. Never invent one.
+- Paginated tools accept `page` (1-based, default `1`) and `limit` (default `10`, max `50`).
+
+---
+
+## Workspaces
+
+### `list_workspaces`
+
+Lists the personal account plus every organization the user belongs to, and flags the active one.
+
+Takes no parameters.
+
+### `switch_workspace`
+
+Changes the active workspace for every subsequent action. No re-authentication needed.
+
+<ParamField body="workspaceId" type="string" required>
+  `personal` for the user's own account, or an organization id from `list_workspaces`. An exact organization name also works.
+</ParamField>
+
+See [Workspaces](/mcp/workspaces) for how scoping behaves.
+
+---
+
+## Contacts
+
+### `search_contacts`
+
+Searches the directory by name, phone, email, company, job title, state, website, revenue or company size. Returns id, name, phone, email and `lastCallAt`.
+
+<ParamField body="query" type="string" required>
+  Search text. Pass `*` to list **all** contacts, paginated.
+</ParamField>
+<ParamField body="page" type="number">1-based page number.</ParamField>
+<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+
+Use this to resolve a `contactId` before any tool that needs one.
+
+### `get_contact`
+
+Fetches one contact in full, including recent calls, notes, meetings and tags.
+
+<ParamField body="contactId" type="string (uuid)" required>The contact to fetch.</ParamField>
+
+### `find_contacts_by_outcome`
+
+Finds contacts whose calls reached given outcomes — who converted, showed interest or booked a meeting. Useful for deriving a real ICP from closed business.
+
+<ParamField body="outcomes" type="string[]" required>
+  One or more of `meeting_booked`, `sale`, `interested`, `follow_up`, `callback_scheduled`, `not_interested`, `no_answer`, `voicemail`, `wrong_number`, `gatekeeper`.
+</ParamField>
+<ParamField body="match" type="string">
+  `any` (default) matches a contact with **any** call in those outcomes. `last` considers only the most recent call.
+</ParamField>
+<ParamField body="includeUnreachable" type="boolean">
+  Include contacts flagged `doNotCall` or `unsubscribed`. Defaults to `false`.
+</ParamField>
+<ParamField body="page" type="number">1-based page number.</ParamField>
+<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+
+Returns ICP-relevant fields — company, job title, seniority, department, country, score, lifecycle stage — plus `lastOutcome` and `lastCallAt`.
+
+### `create_contact`
+
+<ParamField body="phoneNumber" type="string" required>
+  E.164. Must be unique within the workspace — the tool fails fast on a duplicate.
+</ParamField>
+<ParamField body="name" type="string">Display name.</ParamField>
+<ParamField body="firstName" type="string">Given name.</ParamField>
+<ParamField body="lastName" type="string">Family name.</ParamField>
+<ParamField body="email" type="string">Primary email.</ParamField>
+<ParamField body="jobTitle" type="string">Role at the company.</ParamField>
+<ParamField body="organization" type="string">Company name.</ParamField>
+<ParamField body="state" type="string">State or region.</ParamField>
+<ParamField body="website" type="string">Company website.</ParamField>
+<ParamField body="revenue" type="string">Company revenue or range.</ParamField>
+<ParamField body="companySize" type="string">Headcount band.</ParamField>
+<ParamField body="source" type="string">Lead source label. Defaults to `mcp`.</ParamField>
+<ParamField body="note" type="string">Initial note.</ParamField>
+<ParamField body="tagIds" type="string[]">Tag UUIDs to assign.</ParamField>
+
+### `update_contact`
+
+Patches an existing contact. Only the fields you send change.
+
+<ParamField body="contactId" type="string (uuid)" required>The contact to update.</ParamField>
+<ParamField body="tagIds" type="string[]">
+  **Replaces** the contact's tag set. Omit it to leave tags untouched.
+</ParamField>
+
+All other fields match `create_contact`. Ownership is verified before writing.
+
+### `delete_contact`
+
+Soft-deletes a contact by setting `deletedAt`.
+
+<ParamField body="contactId" type="string (uuid)" required>The contact to delete.</ParamField>
+<ParamField body="confirm" type="boolean" required>Must be the literal `true`.</ParamField>
+<ParamField body="confirmPhoneNumber" type="string" required>
+  Must exactly match the contact's stored phone number in E.164.
+</ParamField>
+
+<Warning>
+Destructive and double-guarded. Fetch the contact with `get_contact` first, read the phone number back to the user, and get an explicit "yes, delete" before calling. Assistants must never auto-confirm.
+</Warning>
+
+---
+
+## Calls and follow-ups
+
+### `list_calls`
+
+Returns calls in full detail: direction, status, timing, duration, logged outcome and note, plus the transcription and recording URL when present. Newest first. Cost and low-level telephony fields are intentionally excluded.
+
+<ParamField body="contactId" type="string (uuid)">Filter to one contact's calls.</ParamField>
+<ParamField body="outcome" type="string[]">Only calls with one of these outcomes.</ParamField>
+<ParamField body="status" type="string[]">
+  Only calls in these states: `pending`, `ringing`, `answered`, `recording`, `completed`, `failed`.
+</ParamField>
+<ParamField body="dateFrom" type="string (ISO-8601)">Only calls created at or after this.</ParamField>
+<ParamField body="dateTo" type="string (ISO-8601)">Only calls created at or before this.</ParamField>
+<ParamField body="page" type="number">1-based page number.</ParamField>
+<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+
+### `log_call_outcome`
+
+Records how a past call went.
+
+<ParamField body="callId" type="string (uuid)" required>
+  An existing call belonging to the active workspace.
+</ParamField>
+<ParamField body="outcome" type="string" required>
+  One of the `CallOutcome` values listed under `find_contacts_by_outcome`.
+</ParamField>
+<ParamField body="outcomeNote" type="string">Free-text note.</ParamField>
+
+### `create_callback`
+
+Schedules a reminder to call a contact back. Creates a callback task and a reminder.
+
+<ParamField body="contactId" type="string (uuid)" required>Who to call back.</ParamField>
+<ParamField body="scheduledAt" type="string (ISO-8601)" required>Future datetime with offset.</ParamField>
+<ParamField body="callId" type="string (uuid)">Originating call.</ParamField>
+<ParamField body="note" type="string">Free-text note.</ParamField>
+
+### `schedule_meeting`
+
+Books a meeting. When the user has a Google or Microsoft calendar connected, the event is synced and a Meet or Teams link is generated.
+
+<ParamField body="contactId" type="string (uuid)" required>Who the meeting is with.</ParamField>
+<ParamField body="scheduledAt" type="string (ISO-8601)" required>Start time with offset.</ParamField>
+<ParamField body="title" type="string">Meeting title.</ParamField>
+<ParamField body="duration" type="number">Minutes. Defaults to 30.</ParamField>
+<ParamField body="location" type="string">Address or video URL.</ParamField>
+<ParamField body="notes" type="string">Notes.</ParamField>
+<ParamField body="attendeeEmail" type="string">Sends a calendar invite to this address.</ParamField>
+<ParamField body="calendarProvider" type="string">Calendar to sync with.</ParamField>
+<ParamField body="callId" type="string (uuid)">Originating call.</ParamField>
+
+<Info>
+This tool reaches an external system (calendar sync and email invites), so it is flagged `openWorldHint`.
+</Info>
+
+---
+
+## Call sessions
+
+A **call session** is a queue of contacts plus a magic link that lets someone dial through them one by one — without logging in.
+
+### `create_call_session`
+
+<ParamField body="contacts" type="object[]" required>
+  Ordered queue, 1 to 500 entries. Each accepts `contactId` and/or `phoneNumber` (E.164, required when `contactId` is absent), plus optional `name`, `company`, `jobTitle`, `state`, `website`, `revenue`, `companySize`. Provide `contactId` when you have it — name and phone are then looked up server-side.
+</ParamField>
+<ParamField body="title" type="string">Session title, visible to the magic-link recipient.</ParamField>
+<ParamField body="campaignId" type="string (uuid)">Attribute calls to a campaign.</ParamField>
+<ParamField body="expiresInMinutes" type="number">Link lifetime. Defaults to 60 minutes, max 30 days.</ParamField>
+<ParamField body="maxCalls" type="number">Auto-complete the session after N calls, max 500.</ParamField>
+<ParamField body="metadata" type="object">Free-form JSON persisted with the session; not exposed to the magic-link UI.</ParamField>
+
+<Warning>
+Returns a `joinUrl` containing a magic-link token. The token is shown **once** and cannot be re-fetched. Share the URL exactly as returned, and only with someone authorized to call on the workspace's behalf.
+</Warning>
+
+### `get_call_session`
+
+Returns safe metadata — status, contact count, calls completed, expiry, and whether a token is still active. It never exposes the raw magic link.
+
+<ParamField body="callSessionId" type="string (uuid)" required>The session to inspect.</ParamField>
+
+### `update_call_session`
+
+<ParamField body="callSessionId" type="string (uuid)" required>The session to update.</ParamField>
+<ParamField body="title" type="string">New title.</ParamField>
+<ParamField body="campaignId" type="string (uuid) | null">Set a campaign, or `null` to detach.</ParamField>
+<ParamField body="expiresInMinutes" type="number">Extend validity.</ParamField>
+<ParamField body="contacts" type="object[]">
+  Replaces the queue. Only allowed **before the first call** has started.
+</ParamField>
+<ParamField body="metadata" type="object">Replace metadata.</ParamField>
+
+### `delete_call_session`
+
+Revokes the session. Past calls are preserved, but every active magic link stops working immediately.
+
+<ParamField body="callSessionId" type="string (uuid)" required>The session to revoke.</ParamField>
+
+<Warning>
+Flagged destructive — the link cannot be restored. Issue a new session instead.
+</Warning>
+
+---
+
+## Lead prospecting
+
+These tools use the workspace's connected enrichment provider. Apollo is preferred when both are connected.
+
+### `search_leads`
+
+Searches for candidates. Results are **not** contacts yet.
+
+<ParamField body="provider" type="string">`apollo` or `prospeo`. Auto-selected when omitted.</ParamField>
+<ParamField body="keywords" type="string">Free-text keywords.</ParamField>
+<ParamField body="jobTitles" type="string[]">Job titles to include.</ParamField>
+<ParamField body="jobTitlesExclude" type="string[]">Job titles to exclude.</ParamField>
+<ParamField body="seniorities" type="string[]">Seniority levels.</ParamField>
+<ParamField body="departments" type="string[]">Departments.</ParamField>
+<ParamField body="personCountries" type="string[]">Countries.</ParamField>
+<ParamField body="personCities" type="string[]">Cities.</ParamField>
+<ParamField body="industries" type="string[]">Industries.</ParamField>
+<ParamField body="companyNames" type="string[]">Company names.</ParamField>
+<ParamField body="companyDomains" type="string[]">Company domains.</ParamField>
+<ParamField body="employeeCountRanges" type="string[]">Headcount bands.</ParamField>
+<ParamField body="technologies" type="string[]">Technologies in use.</ParamField>
+<ParamField body="hasEmail" type="boolean">Only candidates with an email.</ParamField>
+<ParamField body="hasPhone" type="boolean">Only candidates with a phone.</ParamField>
+<ParamField body="emailVerified" type="boolean">Only verified emails.</ParamField>
+<ParamField body="page" type="number">Page number.</ParamField>
+<ParamField body="perPage" type="number">Results per page, max 25.</ParamField>
+
+Returns a `jobId` plus candidates with `externalId`, person and company summaries, and whether emails and phones are available. Pass the `jobId` to the two tools below.
+
+### `reveal_lead`
+
+Reveals a candidate's email — and optionally a mobile phone — and upserts a Ringee contact so the lead is immediately callable.
+
+<ParamField body="jobId" type="string (uuid)" required>From `search_leads`.</ParamField>
+<ParamField body="externalId" type="string" required>The candidate to reveal.</ParamField>
+<ParamField body="revealPhone" type="boolean">Also reveal a mobile phone. Costs extra provider credits.</ParamField>
+
+<Warning>
+Spends the enrichment provider's credits every time and is **not** idempotent. Call it only after the user explicitly picks that lead.
+</Warning>
+
+### `import_leads_as_contacts`
+
+Bulk-imports candidates from a search job as Ringee contacts, deduplicated by phone number. Does **not** reveal hidden emails or phones — use `reveal_lead` first if you need those.
+
+<ParamField body="jobId" type="string (uuid)" required>From `search_leads`.</ParamField>
+<ParamField body="externalIds" type="string[]" required>Candidates to import.</ParamField>
+<ParamField body="tagIds" type="string[]">Tags to assign to every imported contact.</ParamField>
+
+Returns counts, duplicates, errors and the new contact ids.
+
+---
+
+## Placing calls
+
+There is no tool that dials a number. Calls are placed in the user's browser or mobile app over WebRTC, so an assistant cannot start one server-side.
+
+To get someone dialing from a chat, use `create_call_session` and share the `joinUrl`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Workspaces" icon="building" href="/mcp/workspaces">
+    How personal and organization scoping works
+  </Card>
+  <Card title="Safety" icon="shield-check" href="/mcp/safety">
+    Confirmation rules for sensitive actions
+  </Card>
+</CardGroup>

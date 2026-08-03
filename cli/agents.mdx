@@ -1,0 +1,137 @@
+---
+title: Use it from an agent
+description: 'Give any shell-capable agent access to Ringee'
+---
+
+Any agent harness that can run shell commands can operate Ringee through the CLI — no MCP client implementation required. Install it, export the connection, and have the agent call commands with `--json`.
+
+```bash
+npm i -g ringee
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/sse"
+
+ringee config check                 # confirm connectivity
+ringee contacts search acme --json  # machine-readable for the agent
+```
+
+This works with Claude Code, OpenClaw, Hermes, a cron job, or your own loop.
+
+<Info>
+If your harness speaks MCP natively, connect the [MCP server](/mcp/connect) directly instead — you get typed tool schemas and the client can surface confirmation prompts itself.
+</Info>
+
+## Why this is safe
+
+The guardrails live in the CLI, not in the prompt. An autonomous agent cannot spend credits, mint a magic link or delete a contact without passing a flag that encodes a deliberate decision:
+
+| Action | Required |
+|---|---|
+| `leads reveal` | `--yes` |
+| `sessions create` | `--yes` |
+| `sessions revoke` | `--yes` |
+| `contacts delete` | `--confirm-phone <storedPhone>` **and** `--yes` |
+
+Without them the command exits non-zero with an explanation, which the agent can relay to the user instead of guessing.
+
+## Brief the agent
+
+Three commands print the shared operating knowledge, no connection needed:
+
+```bash
+ringee tools    # capability catalog with sensitivity tags
+ringee flow     # the outbound flow, step by step
+ringee prompt   # the full agent system prompt
+```
+
+Feeding `ringee prompt` into your agent's system message gives it the same rules the Claude skills and the ChatGPT app follow — which tool maps to which action, the prospect → contact → session → outcome → follow-up flow, and when to stop and ask.
+
+## A typical loop
+
+<Steps>
+<Step title="Resolve before acting">
+
+```bash
+ringee contacts search "ada" --json
+```
+
+Never act on an id the user did not approve.
+
+</Step>
+
+<Step title="Do the work">
+
+```bash
+ringee outcomes log <callId> interested --note "Wants pricing" --json
+ringee callbacks create <contactId> 2026-05-24T10:00:00-04:00 --json
+```
+
+</Step>
+
+<Step title="Stop at sensitive steps">
+
+Ask the user, then pass the flag:
+
+```bash
+ringee sessions create --contact <id> --title "Tue outbound" --yes --json
+```
+
+</Step>
+
+<Step title="Check exit codes">
+
+Sensitive commands exit non-zero when the confirmation flag is missing. Treat that as "ask the human", not as a bug to work around.
+
+</Step>
+</Steps>
+
+## Build on the agent layer directly
+
+If you are writing TypeScript instead of shelling out, use `@ringee-io/agent` — the package the CLI itself is built on. It contains no business logic: it validates input, talks to the MCP, and shares the catalog, flows, prompts and rules.
+
+```ts
+import { RingeeClient } from "@ringee-io/agent";
+
+// Reads RINGEE_MCP_URL, or RINGEE_BACKEND_URL + RINGEE_USER_ID [+ RINGEE_ORG_ID]
+const ringee = RingeeClient.fromEnv();
+
+const { contacts } = await ringee.searchContacts({ query: "acme" });
+
+const created = await ringee.createContact({
+  phoneNumber: "+14155552671",
+  name: "Jane Doe",
+});
+
+// Sensitive — confirm with the user first:
+const session = await ringee.createCallSession({
+  title: "Tuesday outbound",
+  contacts: [{ contactId: created.contact!.id }],
+});
+console.log(session.joinUrl); // share exactly as returned
+
+await ringee.close();
+```
+
+Reuse the operating knowledge in your own prompts:
+
+```ts
+import { buildSystemPrompt, TOOL_CATALOG, PRIMARY_FLOW } from "@ringee-io/agent";
+```
+
+| Export | Purpose |
+|---|---|
+| `RingeeClient` | Typed facade — one method per capability |
+| `RingeeMcpClient` | Lower-level MCP SSE transport wrapper |
+| `TOOL_CATALOG` | Action → tool map with sensitivity classes |
+| `PRIMARY_FLOW` | The outbound flow definition |
+| `buildSystemPrompt()` | Composed prompt from catalog, flow and rules |
+| `schemas`, `types` | Zod input schemas and result shapes |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Claude skills and apps" icon="sparkles" href="/mcp/apps">
+    Ready-made `/ringee` commands for Claude and ChatGPT
+  </Card>
+  <Card title="Safety model" icon="shield-check" href="/mcp/safety">
+    What the server enforces regardless of the client
+  </Card>
+</CardGroup>

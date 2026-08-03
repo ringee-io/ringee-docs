@@ -1,0 +1,128 @@
+---
+title: Safety and confirmations
+description: 'How Ringee guards destructive and credit-spending tools'
+---
+
+An AI assistant with access to your CRM can delete records, spend money and mint shareable links. Ringee's MCP server treats those three categories differently from ordinary reads and writes.
+
+## Sensitivity classes
+
+| Class | Meaning | Tools |
+|---|---|---|
+| **Read** | Never modifies state | `list_workspaces`, `search_contacts`, `get_contact`, `find_contacts_by_outcome`, `list_calls`, `get_call_session`, `search_leads` |
+| **Write** | Ordinary modification | `switch_workspace`, `create_contact`, `update_contact`, `log_call_outcome`, `create_callback`, `schedule_meeting`, `update_call_session`, `import_leads_as_contacts` |
+| **Sensitive** | Spends provider credits or mints a shareable link | `reveal_lead`, `create_call_session` |
+| **Destructive** | Irreversible from the user's perspective | `delete_contact`, `delete_call_session` |
+
+## MCP annotations
+
+Every tool carries the standard MCP trust hints, so a client can surface the right warning without knowing anything about Ringee:
+
+| Hint | Meaning |
+|---|---|
+| `readOnlyHint` | The tool only reads. |
+| `destructiveHint` | The tool may perform irreversible updates. |
+| `idempotentHint` | Repeating the call with the same arguments has no extra effect. |
+| `openWorldHint` | The tool reaches an external system — an enrichment provider or a calendar. |
+
+`schedule_meeting`, `search_leads` and `reveal_lead` are the open-world tools: they sync calendars, send invites, or query Apollo/Prospeo.
+
+## Hard guards in the server
+
+Some protections do not depend on the client behaving well.
+
+<AccordionGroup>
+<Accordion title="delete_contact requires the phone number">
+
+Two conditions must both hold:
+
+1. `confirm` is the literal boolean `true`;
+2. `confirmPhoneNumber` exactly matches the contact's stored E.164 number.
+
+A mismatch returns an error telling the assistant to re-fetch the contact and ask the user again. This makes it very hard to delete the wrong record from a fuzzy instruction like "delete that lead".
+
+</Accordion>
+
+<Accordion title="Ownership is verified before every write">
+
+`update_contact` and `delete_contact` re-read the contact and check it belongs to the active workspace before writing. Passing an id from another workspace fails.
+
+</Accordion>
+
+<Accordion title="Magic-link tokens are shown once">
+
+`create_call_session` returns the `joinUrl` a single time. `get_call_session` reports whether a token is still active but never returns the token itself, so a leaked transcript cannot be replayed into a working link.
+
+</Accordion>
+
+<Accordion title="Revocation is immediate">
+
+`delete_call_session` marks the session revoked and invalidates every active token at once. Call history is preserved — the revoke is not a data deletion.
+
+</Accordion>
+
+<Accordion title="Queue replacement is time-bounded">
+
+`update_call_session` can replace the contact queue only before the first call. Once dialing starts, the queue is frozen so progress and attribution stay coherent.
+
+</Accordion>
+</AccordionGroup>
+
+## Credits
+
+<Note>
+MCP tools **never debit Ringee calling credits.** Lead search and reveal spend your connected enrichment provider's own allowance instead. The equivalent flows in the web app do charge Ringee credits — this difference is deliberate.
+</Note>
+
+`reveal_lead` is explicitly flagged non-idempotent: repeating it spends the provider's credits again. Assistants should not retry it automatically after an ambiguous failure.
+
+## What an assistant should do
+
+The server-side rules exist as a backstop. Well-behaved assistants also follow these:
+
+<Steps>
+<Step title="Resolve before acting">
+
+Use `search_contacts` or `get_contact` to resolve a real id before any write. Never act on an id the user did not approve.
+
+</Step>
+
+<Step title="Read the target back">
+
+Before a destructive action, state what will happen and to which record — name and phone number — and wait for an explicit yes.
+
+</Step>
+
+<Step title="Confirm spend">
+
+Before `reveal_lead`, say that provider credits will be spent and for which lead.
+
+</Step>
+
+<Step title="Treat links as secrets">
+
+Share a `joinUrl` only with the person who asked for it. Never post it into a shared channel unprompted.
+
+</Step>
+
+<Step title="Never auto-confirm">
+
+`confirm: true` must reflect a human decision, not the assistant's own inference.
+
+</Step>
+</Steps>
+
+These rules ship as machine-readable guardrails in [`@ringee-io/agent`](/cli/agents), which is what the [`ringee` CLI](/cli/overview), the Claude skills and the ChatGPT app all build on.
+
+## CLI equivalents
+
+The CLI enforces the same classes with explicit flags, so an autonomous agent cannot spend or delete by accident:
+
+| Action | Required flags |
+|---|---|
+| `leads reveal` | `--yes` |
+| `sessions create` | `--yes` |
+| `sessions revoke` | `--yes` |
+| `contacts delete` | `--confirm-phone <storedPhone>` **and** `--yes` |
+
+See [CLI commands](/cli/commands).

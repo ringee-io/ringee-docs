@@ -1,0 +1,154 @@
+---
+title: Quickstart
+description: 'Place your first call from your own web app'
+---
+
+<Steps>
+<Step title="Create a publishable key">
+
+In Ringee, open **Integrations → Custom Integrations**, open or create an integration, then under **Settings → Dialer SDK · Publishable keys**:
+
+1. add your exact origin, for example `https://crm.example.com`;
+2. click **Generate publishable key**;
+3. copy the `pk_live_…` value.
+
+Full walkthrough: [Publishable keys](/dialer-sdk/publishable-keys).
+
+</Step>
+
+<Step title="Add the SDK to your page">
+
+<CodeGroup>
+
+```html CDN
+<script src="https://unpkg.com/@ringee/dialer-sdk"></script>
+<script>
+  const ringee = Ringee.mount({
+    key: "pk_live_xxxxx",
+    locale: "en",
+    side: "right",
+  });
+</script>
+```
+
+```bash npm
+npm install @ringee/dialer-sdk
+```
+
+</CodeGroup>
+
+```ts
+import { createFloating } from "@ringee/dialer-sdk/ui";
+
+const ringee = createFloating({
+  key: "pk_live_xxxxx",
+  agentEmail: currentUser.email, // prefills the form only
+  locale: "en",
+});
+```
+
+`Ringee.mount(options)` is an alias for `Ringee.createFloating(options)`.
+
+</Step>
+
+<Step title="Sign the agent in">
+
+Open the launcher. The agent enters their email, Ringee sends a one-time code, and they verify it. `agentEmail` only prefills the field — Ringee always requires proof of access to that mailbox.
+
+Once verified, the panel is ready to dial.
+
+</Step>
+
+<Step title="Place a call">
+
+Either type a number in the keypad, or trigger it from your own UI:
+
+```ts
+ringee.startCall({
+  to: "+13055550142",
+  name: "Morgan Reed",
+  externalContactId: "crm-contact-294",
+});
+```
+
+`startCall()` can be called before initialization finishes — the SDK queues the request and places it once the dialer reaches `ready`. If the agent is not signed in, the OTP flow appears first.
+
+</Step>
+</Steps>
+
+## Pin a version in production
+
+The unpinned CDN URL always serves the latest release. Pin it so a host deployment never picks up an unexpected version:
+
+```html
+<script src="https://unpkg.com/@ringee/dialer-sdk@0.1.1/dist/ringee.global.js"></script>
+```
+
+## Attach the current contact
+
+If your app already knows who is on screen, tell the SDK:
+
+```ts
+ringee.setContact({
+  name: "Morgan Reed",
+  number: "+13055550142",
+  externalContactId: "crm-contact-294",
+});
+```
+
+See [CRM contacts](/dialer-sdk/contacts).
+
+## Point at a self-hosted backend
+
+`apiUrl` is the API origin **without** `/api`:
+
+```ts
+createFloating({
+  key: "pk_live_xxxxx",
+  apiUrl: "https://ringee-api.example.com",
+});
+```
+
+For local development:
+
+```ts
+createFloating({
+  key: "pk_live_xxxxx",
+  apiUrl: "http://localhost:3000",
+  debug: true,
+});
+```
+
+<Warning>
+`apiUrl` and your frontend origin are different values. The **frontend** origin — for example `http://localhost:4200` — is what must be in the publishable key's allowed origins.
+</Warning>
+
+## Try the playgrounds
+
+The repository ships three:
+
+| Path | What it does |
+|---|---|
+| `apps/sdk-playground/live` | Real Floating, Bar and Headless modes against a real backend — OTP, WebRTC and real calls |
+| `apps/sdk-playground/vanilla-headless` | Minimal framework-free headless example |
+| `apps/sdk-playground/ui-gallery` | Visual states driven by a simulated dialer, no network or WebRTC |
+
+```bash
+node apps/sdk-playground/live/build.mjs --serve   # http://localhost:5173
+```
+
+Add `http://localhost:5173` to your allowed origins first, and generate the publishable key after that.
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Floating" icon="circle-dot" href="/dialer-sdk/floating">
+    Launcher and panel
+  </Card>
+  <Card title="Bar" icon="minus" href="/dialer-sdk/bar">
+    Inline dialer
+  </Card>
+  <Card title="Headless" icon="code" href="/dialer-sdk/headless">
+    Build your own UI
+  </Card>
+</CardGroup>

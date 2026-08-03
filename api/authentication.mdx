@@ -1,0 +1,154 @@
+---
+title: Authentication
+description: 'Create a Custom Integration and authenticate your requests'
+---
+
+Every Public API request is authenticated with a **Custom Integration API key** (`cik_live_…`). The key identifies the integration and the workspace it belongs to — there is no separate account id to send.
+
+## Create a Custom Integration
+
+Custom Integrations are available to organization admins and to personal accounts with administrative access.
+
+<Steps>
+<Step title="Open Integrations">
+
+Sign in to Ringee and open **Integrations** from the sidebar. The direct route is `/dashboard/settings/integrations`.
+
+</Step>
+
+<Step title="Open the Custom Integrations tab">
+
+Select the **Custom Integrations** tab, then click **New custom integration**. Give it a name that identifies the system you are connecting, such as `Acme CRM`.
+
+</Step>
+
+<Step title="Copy your credentials">
+
+Ringee shows two secrets when the integration is created:
+
+- the **API key** (`cik_live_…`) — used to authenticate your requests to Ringee;
+- the **webhook signing secret** (`whsec_…`) — used to verify webhooks Ringee sends to you.
+
+Copy both immediately and store them in your server-side secret manager.
+
+</Step>
+
+<Step title="Set your webhook URL">
+
+Under **Settings**, set the **outbound URL** to the public HTTPS endpoint that will receive Ringee events, and select which events you want to subscribe to.
+
+</Step>
+
+<Step title="Test the connection">
+
+Click **Test webhook**. Ringee sends a `test.ping` event to your endpoint and shows the HTTP status and latency it got back.
+
+</Step>
+</Steps>
+
+## Authenticate a request
+
+Send the API key in the `X-Ringee-Api-Key` header.
+
+```bash
+curl -X POST https://api.ringee.io/api/integrations/custom/webhook \
+  -H "Content-Type: application/json" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…" \
+  -d '{
+    "event": "contact.upserted",
+    "eventId": "crm_9f1c2a7e",
+    "occurredAt": "2026-05-23T14:30:00.000Z",
+    "data": { "externalId": "ext_42", "phoneNumber": "+14155550123" }
+  }'
+```
+
+<Warning>
+The API key is a **server-side secret**. Never send it from a browser, never commit it, never log it, and never store it in `localStorage`. If your CRM has a serverless layer (Supabase Edge Functions, Vercel functions, Lambda), all Ringee calls must happen there.
+</Warning>
+
+## Key types
+
+Ringee issues two different key types from the same integration. They are not interchangeable.
+
+| Key | Used by | Sent from | Safe in frontend? |
+|---|---|---|---|
+| `cik_live_…` | Public API (this section) | Your server | **No** |
+| `pk_live_…` | [Dialer SDK](/dialer-sdk/overview) | The browser | Yes |
+| `whsec_…` | Webhook signature verification | Never sent | **No** |
+
+## How keys are stored
+
+- The API key is stored **hashed** (SHA-256). Ringee can never show it to you again after creation — only its prefix, for example `cik_live_a1b2c3d4`.
+- The signing secret is stored **encrypted at rest** and decrypted only when signing an outbound delivery.
+
+## Rotating credentials
+
+<AccordionGroup>
+<Accordion title="Rotate the API key">
+
+Click **Regenerate API key** in the integration settings. The previous key stops working immediately.
+
+<Warning>
+Rotating the API key also **revokes every Dialer SDK publishable key** (`pk_live_…`) minted for this integration. If you use both, mint a new publishable key right after rotating.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Rotate the signing secret">
+
+Click **Regenerate signing secret**. Ringee starts signing with the new secret on the next delivery, so update your verifier first or accept a short window of rejected events.
+
+</Accordion>
+
+<Accordion title="Disable an integration">
+
+Setting an integration's status to anything other than `active` stops all outbound deliveries and invalidates its publishable keys. Queued deliveries are marked failed with `integration disabled`.
+
+</Accordion>
+</AccordionGroup>
+
+## Workspace scope
+
+An integration belongs to either a **personal account** or an **organization**. Everything it reads and writes is scoped to that workspace:
+
+- contacts and companies you upsert are created in that workspace;
+- only calls and activity from that workspace are sent to your webhook;
+- `ownerEmail` and `agentEmail` are resolved against that workspace's members.
+
+<Info>
+When an integration is organization-scoped, `agentEmail` is **required** for [click-to-call](/api/click-to-call) — Ringee needs to know which member places the call.
+</Info>
+
+## Administrative endpoints
+
+These endpoints manage the integration itself and are authenticated with an **admin dashboard session**, not the API key. They exist for automation and self-hosted deployments; the dashboard does the same thing.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/integrations/custom` | List integrations |
+| `POST` | `/api/integrations/custom` | Create an integration |
+| `GET` | `/api/integrations/custom/event-specs` | Machine-readable spec for every event |
+| `GET` | `/api/integrations/custom/:id` | Get one integration |
+| `PATCH` | `/api/integrations/custom/:id` | Update name, outbound URL, subscribed events, status |
+| `DELETE` | `/api/integrations/custom/:id` | Delete an integration |
+| `POST` | `/api/integrations/custom/:id/regenerate-api-key` | Rotate the API key |
+| `POST` | `/api/integrations/custom/:id/regenerate-signing-secret` | Rotate the signing secret |
+| `POST` | `/api/integrations/custom/:id/publishable-keys` | Mint a Dialer SDK `pk_live_` key |
+| `POST` | `/api/integrations/custom/:id/test-webhook` | Send a `test.ping` |
+| `GET` | `/api/integrations/custom/:id/inbound-logs` | Inbound event log |
+| `GET` | `/api/integrations/custom/:id/outbound-logs` | Delivery log |
+
+<Tip>
+`GET /api/integrations/custom/event-specs` returns the same event definitions this documentation is generated from — required fields, optional fields and example payloads. Use it if you want to validate your integration against Ringee programmatically.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Send your first event" icon="arrow-right" href="/api/inbound-events">
+    Push contacts and companies into Ringee
+  </Card>
+  <Card title="Verify webhooks" icon="shield-check" href="/api/outbound-webhooks">
+    Validate the HMAC signature on incoming events
+  </Card>
+</CardGroup>
