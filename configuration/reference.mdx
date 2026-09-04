@@ -1,11 +1,11 @@
 ---
 title: Configuration Reference
-description: 'Environment variables reference for Ringee'
+description: "Environment variables reference for Ringee"
 ---
 
 Ringee is configured entirely through environment variables. Any change to environment variables requires an **application restart**.
 
-The full example file can be found at: [`.env.example` on GitHub](https://github.com/ringee-io/ringee/blob/main/.env.example)
+The full example file can be found at: [`.env.example` on GitHub](https://github.com/ringee-io/ringee-app/blob/main/.env.example)
 
 ## Required Settings
 
@@ -47,7 +47,7 @@ http://localhost:4200
 
 #### `BACKEND_URL` / `PUBLIC_BACKEND_URL`
 
-URL where the backend API is served.
+URL where the backend API is served. In production, set both variables to the same public HTTPS origin without an `/api` suffix. Ringee uses it to build provider callback URLs for AI Voice Agents and desk phones.
 
 ```
 http://localhost:3000
@@ -63,11 +63,11 @@ A random string used for encrypting sensitive data at the application level. Sho
 
 The orchestrator (`apps/orchestrator`) runs durable workflows and schedules. Both the backend and the orchestrator read these.
 
-| Variable | Description |
-|---|---|
-| `TEMPORAL_ADDRESS` | Temporal server address (default: `localhost:7233`) |
-| `TEMPORAL_NAMESPACE` | Temporal namespace (default: `default`) |
-| `TEMPORAL_TASK_QUEUE` | Task queue name (default: `ringee`) |
+| Variable              | Description                                         |
+| --------------------- | --------------------------------------------------- |
+| `TEMPORAL_ADDRESS`    | Temporal server address (default: `localhost:7233`) |
+| `TEMPORAL_NAMESPACE`  | Temporal namespace (default: `default`)             |
+| `TEMPORAL_TASK_QUEUE` | Task queue name (default: `ringee`)                 |
 
 ---
 
@@ -75,14 +75,14 @@ The orchestrator (`apps/orchestrator`) runs durable workflows and schedules. Bot
 
 See the [Clerk Configuration](/configuration/clerk) guide for setup details.
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
-| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key (backend) |
-| `CLERK_SECRET_KEY` | Clerk secret key |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook signing secret |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Sign-in page URL (default: `/auth/sign-in`) |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Sign-up page URL (default: `/auth/sign-up`) |
+| Variable                              | Description                                             |
+| ------------------------------------- | ------------------------------------------------------- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | Clerk publishable key                                   |
+| `CLERK_PUBLISHABLE_KEY`               | Clerk publishable key (backend)                         |
+| `CLERK_SECRET_KEY`                    | Clerk secret key                                        |
+| `CLERK_WEBHOOK_SIGNING_SECRET`        | Webhook signing secret                                  |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | Sign-in page URL (default: `/auth/sign-in`)             |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | Sign-up page URL (default: `/auth/sign-up`)             |
 | `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Redirect after sign-in (default: `/dashboard/overview`) |
 | `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Redirect after sign-up (default: `/dashboard/overview`) |
 
@@ -92,14 +92,19 @@ See the [Clerk Configuration](/configuration/clerk) guide for setup details.
 
 See the [Telnyx Configuration](/providers/telnyx) guide for setup details.
 
-| Variable | Description |
-|---|---|
-| `TELNYX_API_KEY` | Your Telnyx API key |
-| `TELNYX_CONNECTION_ID` | Telnyx WebRTC connection ID |
-| `TELNYX_SIP_USER` | SIP username for WebRTC |
-| `TELNYX_SIP_PASSWORD` | SIP password for WebRTC |
-| `NEXT_PUBLIC_TELNYX_LOGIN` | SIP login exposed to frontend |
-| `NEXT_PUBLIC_TELNYX_PASSWORD` | SIP password exposed to frontend |
+| Variable                           | Description                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `TELNYX_API_KEY`                   | Your Telnyx API key                                                                        |
+| `TELNYX_CONNECTION_ID`             | Telnyx WebRTC connection ID                                                                |
+| `TELNYX_CALL_CONTROL_APP_ID`       | Call Control Application for server-originated calls; falls back to `TELNYX_CONNECTION_ID` |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | Outbound Voice Profile used by AI Voice Agents and desk phones                             |
+| `TELNYX_PUBLIC_KEY`                | Public key used to verify Telnyx webhooks                                                  |
+| `TELNYX_SIP_USER`                  | SIP username for WebRTC                                                                    |
+| `TELNYX_SIP_PASSWORD`              | SIP password for WebRTC                                                                    |
+| `NEXT_PUBLIC_TELNYX_LOGIN`         | SIP login exposed to frontend                                                              |
+| `NEXT_PUBLIC_TELNYX_PASSWORD`      | SIP password exposed to frontend                                                           |
+
+`TELNYX_CALL_CONTROL_APP_ID` may use its connection-id fallback when both ids point to the same Telnyx resource. `TELNYX_OUTBOUND_VOICE_PROFILE_ID` is recommended for explicit AI Voice Agent routing and billing, and is required when Desk Phones are enabled; without it, AI Voice Agents retain the provider's default outbound route.
 
 ---
 
@@ -107,9 +112,9 @@ See the [Telnyx Configuration](/providers/telnyx) guide for setup details.
 
 See the [Stripe Configuration](/configuration/stripe) guide for setup details.
 
-| Variable | Description |
-|---|---|
-| `STRIPE_SECRET_KEY` | Your Stripe secret key |
+| Variable                | Description                   |
+| ----------------------- | ----------------------------- |
+| `STRIPE_SECRET_KEY`     | Your Stripe secret key        |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 
 ---
@@ -118,11 +123,11 @@ See the [Stripe Configuration](/configuration/stripe) guide for setup details.
 
 See the [Email Configuration](/configuration/email) guide for details.
 
-| Variable | Description |
-|---|---|
-| `RESEND_API_KEY` | Your Resend API key |
+| Variable             | Description          |
+| -------------------- | -------------------- |
+| `RESEND_API_KEY`     | Your Resend API key  |
 | `EMAIL_FROM_ADDRESS` | Sender email address |
-| `EMAIL_FROM_NAME` | Sender display name |
+| `EMAIL_FROM_NAME`    | Sender display name  |
 
 ---
 
@@ -130,15 +135,15 @@ See the [Email Configuration](/configuration/email) guide for details.
 
 See the [R2 Configuration](/configuration/r2) guide for details.
 
-| Variable | Description |
-|---|---|
-| `CLOUDFLARE_BUCKETNAME` | R2 bucket name |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
-| `CLOUDFLARE_ACCESS_KEY` | R2 access key |
-| `CLOUDFLARE_SECRET_ACCESS_KEY` | R2 secret access key |
-| `CLOUDFLARE_BUCKET_URL` | Public bucket URL |
-| `CLOUDFLARE_REGION` | Region (default: `auto`) |
-| `STORAGE_PROVIDER` | Storage provider (default: `cloudflare`) |
+| Variable                       | Description                              |
+| ------------------------------ | ---------------------------------------- |
+| `CLOUDFLARE_BUCKETNAME`        | R2 bucket name                           |
+| `CLOUDFLARE_ACCOUNT_ID`        | Cloudflare account ID                    |
+| `CLOUDFLARE_ACCESS_KEY`        | R2 access key                            |
+| `CLOUDFLARE_SECRET_ACCESS_KEY` | R2 secret access key                     |
+| `CLOUDFLARE_BUCKET_URL`        | Public bucket URL                        |
+| `CLOUDFLARE_REGION`            | Region (default: `auto`)                 |
+| `STORAGE_PROVIDER`             | Storage provider (default: `cloudflare`) |
 
 ---
 
@@ -146,34 +151,57 @@ See the [R2 Configuration](/configuration/r2) guide for details.
 
 ### Frontend
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL for the frontend |
-| `NEXT_PUBLIC_SITE_URL` | Public site URL |
-| `NEXT_PUBLIC_APP_ENV` | App environment (`development` / `production`) |
+| Variable                   | Description                                    |
+| -------------------------- | ---------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL for the frontend               |
+| `NEXT_PUBLIC_SITE_URL`     | Public site URL                                |
+| `NEXT_PUBLIC_APP_ENV`      | App environment (`development` / `production`) |
 
 ### Sentry (Error Tracking)
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN |
-| `NEXT_PUBLIC_SENTRY_ORG` | Sentry organization slug |
-| `NEXT_PUBLIC_SENTRY_PROJECT` | Sentry project slug |
-| `SENTRY_AUTH_TOKEN` | Sentry auth token |
+| Variable                      | Description                       |
+| ----------------------------- | --------------------------------- |
+| `NEXT_PUBLIC_SENTRY_DSN`      | Sentry DSN                        |
+| `NEXT_PUBLIC_SENTRY_ORG`      | Sentry organization slug          |
+| `NEXT_PUBLIC_SENTRY_PROJECT`  | Sentry project slug               |
+| `SENTRY_AUTH_TOKEN`           | Sentry auth token                 |
 | `NEXT_PUBLIC_SENTRY_DISABLED` | Disable Sentry (`true` / `false`) |
 
 ### AI
 
-| Variable | Description |
-|---|---|
+| Variable         | Description                           |
+| ---------------- | ------------------------------------- |
 | `OPENAI_API_KEY` | OpenAI API key (used for AI features) |
+
+### AI Voice Agents
+
+AI Voice Agents use the normal PostgreSQL, Redis, Temporal, Telnyx and storage settings in addition to these controls. See [Self-host AI Voice Agents](/voice-agents/self-hosting) for the deployment flow.
+
+| Variable                                  | Default                      | Description                                                                                         |
+| ----------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| `AI_VOICE_AGENT_PROFIT_MARGIN`            | `1`                          | Multiplier applied to the provider's AI conversation cost before debiting Ringee credits; minimum 1 |
+| `AI_VOICE_AGENT_RINGEE_MODEL`             | `moonshotai/Kimi-K2.6`       | Concrete model behind the Ringee AI choice                                                          |
+| `AI_VOICE_AGENT_OPENAI_MODEL`             | `openai/gpt-5.2`             | Concrete model behind the OpenAI BYOK choice                                                        |
+| `AI_VOICE_AGENT_ANTHROPIC_MODEL`          | `anthropic/claude-haiku-4-5` | Concrete model behind the Anthropic BYOK choice                                                     |
+| `AI_VOICE_AGENT_GOOGLE_MODEL`             | `google/gemini-2.5-flash`    | Concrete model behind the Google BYOK choice                                                        |
+| `AI_VOICE_AGENT_MAX_CALL_SECONDS`         | `900`                        | Hard limit for one agent call; minimum 30 seconds                                                   |
+| `AI_VOICE_AGENT_TEST_SESSION_TTL_SECONDS` | `600`                        | Browser test-session lifetime; minimum 60 seconds                                                   |
+| `AI_VOICE_AGENT_STORAGE_REGION`           | `us-central-1`               | Provider object-storage region for agent knowledge bases                                            |
+| `AI_VOICE_AGENT_MAX_DOCUMENT_MB`          | `20`                         | Maximum uploaded knowledge-document size in megabytes                                               |
+
+<Note>
+  OpenAI, Anthropic and Google keys selected in the product are per-agent BYOK
+  credentials. Ringee verifies each key, stores it in the voice provider's
+  secret store and persists only the provider reference; they are not global
+  environment variables.
+</Note>
 
 ### MCP and AI assistants
 
 Only needed for the authenticated ChatGPT connector. The public MCP endpoints work with no extra configuration — see [Connect a client](/mcp/connect).
 
-| Variable | Description |
-|---|---|
+| Variable                          | Description                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
 | `MCP_OAUTH_AUTHORIZATION_SERVERS` | OAuth authorization server(s) advertised to ChatGPT — your Clerk issuer. Comma-separated |
-| `MCP_OAUTH_SCOPES` | Scopes advertised (default: `ringee:use`) |
-| `OPENAI_APPS_CHALLENGE_TOKEN` | Domain-verification token served at `/.well-known/openai-apps-challenge` |
+| `MCP_OAUTH_SCOPES`                | Scopes advertised (default: `ringee:use`)                                                |
+| `OPENAI_APPS_CHALLENGE_TOKEN`     | Domain-verification token served at `/.well-known/openai-apps-challenge`                 |

@@ -86,34 +86,22 @@
           {
             "group": "Get Started",
             "icon": "key",
-            "pages": [
-              "api/overview",
-              "api/authentication"
-            ]
+            "pages": ["api/overview", "api/authentication"]
           },
           {
             "group": "CRM to Ringee",
             "icon": "arrow-right-to-bracket",
-            "pages": [
-              "api/inbound-events",
-              "api/click-to-call"
-            ]
+            "pages": ["api/inbound-events", "api/click-to-call"]
           },
           {
             "group": "Ringee to CRM",
             "icon": "arrow-right-from-bracket",
-            "pages": [
-              "api/outbound-webhooks",
-              "api/events-reference"
-            ]
+            "pages": ["api/outbound-webhooks", "api/events-reference"]
           },
           {
             "group": "Guides",
             "icon": "book",
-            "pages": [
-              "api/build-an-integration",
-              "api/logs-and-errors"
-            ]
+            "pages": ["api/build-an-integration", "api/logs-and-errors"]
           }
         ]
       },
@@ -124,26 +112,17 @@
           {
             "group": "Get Started",
             "icon": "plug",
-            "pages": [
-              "mcp/overview",
-              "mcp/connect"
-            ]
+            "pages": ["mcp/overview", "mcp/connect"]
           },
           {
             "group": "Reference",
             "icon": "list",
-            "pages": [
-              "mcp/tools",
-              "mcp/workspaces",
-              "mcp/safety"
-            ]
+            "pages": ["mcp/tools", "mcp/workspaces", "mcp/safety"]
           },
           {
             "group": "Apps",
             "icon": "puzzle-piece",
-            "pages": [
-              "mcp/apps"
-            ]
+            "pages": ["mcp/apps"]
           }
         ]
       },
@@ -154,18 +133,46 @@
           {
             "group": "Get Started",
             "icon": "rocket",
-            "pages": [
-              "cli/overview",
-              "cli/configuration"
-            ]
+            "pages": ["cli/overview", "cli/configuration"]
           },
           {
             "group": "Reference",
             "icon": "list",
+            "pages": ["cli/commands", "cli/agents"]
+          }
+        ]
+      },
+      {
+        "tab": "AI Voice Agents",
+        "icon": "robot",
+        "groups": [
+          {
+            "group": "Get Started",
+            "icon": "rocket",
+            "pages": ["voice-agents/overview", "voice-agents/quickstart"]
+          },
+          {
+            "group": "Build an Agent",
+            "icon": "sliders",
             "pages": [
-              "cli/commands",
-              "cli/agents"
+              "voice-agents/configuration",
+              "voice-agents/knowledge-analysis",
+              "voice-agents/calls"
             ]
+          },
+          {
+            "group": "Automation",
+            "icon": "code",
+            "pages": [
+              "voice-agents/api-reference",
+              "voice-agents/mcp",
+              "voice-agents/cli"
+            ]
+          },
+          {
+            "group": "Operations",
+            "icon": "gear",
+            "pages": ["voice-agents/self-hosting"]
           }
         ]
       },
@@ -203,18 +210,12 @@
           {
             "group": "Reference",
             "icon": "code",
-            "pages": [
-              "dialer-sdk/reference",
-              "dialer-sdk/errors"
-            ]
+            "pages": ["dialer-sdk/reference", "dialer-sdk/errors"]
           },
           {
             "group": "Operations",
             "icon": "shield-halved",
-            "pages": [
-              "dialer-sdk/security",
-              "dialer-sdk/troubleshooting"
-            ]
+            "pages": ["dialer-sdk/security", "dialer-sdk/troubleshooting"]
           }
         ]
       }
@@ -253,13 +254,7 @@
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "cursor"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "cursor"]
   },
   "footer": {
     "socials": {

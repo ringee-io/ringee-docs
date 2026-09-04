@@ -1,35 +1,91 @@
 ---
 title: Click-to-call
-description: 'Open a secure Ringee dialer for a contact from your CRM'
-openapi: 'POST /api/integrations/custom/click-to-call'
+description: "Open a secure Ringee dialer for a contact from your CRM"
+openapi: "POST /api/integrations/custom/click-to-call"
 ---
 
 Click-to-call exchanges a contact for a **short-lived, signed dialer URL**. Your agent opens that URL and Ringee handles caller ID selection, credit checks and the WebRTC call.
 
 <Info>
-Click-to-call is the fastest way to add calling to an existing CRM: one server-side request, one redirect, no frontend SDK. If you want the dialer to live **inside** your own UI instead of a Ringee tab, use the [Dialer SDK](/dialer-sdk/overview).
+  Click-to-call is the fastest way to add calling to an existing CRM: one
+  server-side request, one redirect, no frontend SDK. If you want the dialer to
+  live **inside** your own UI instead of a Ringee tab, use the [Dialer
+  SDK](/dialer-sdk/overview).
 </Info>
 
+## Request
+
+```bash
+curl -X POST https://api.ringee.io/api/integrations/custom/click-to-call \
+  -H "Content-Type: application/json" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…" \
+  -d '{
+    "contactExternalId": "ext_contact_42",
+    "agentEmail": "rep@example.com"
+  }'
+```
+
+| Field               | Type   | Required    | Description                                                                                  |
+| ------------------- | ------ | ----------- | -------------------------------------------------------------------------------------------- |
+| `contactExternalId` | string | Conditional | Contact id previously linked through `contact.upserted`                                      |
+| `phoneNumber`       | string | Conditional | Destination number; required if the external contact does not resolve to a number            |
+| `fromNumber`        | string | No          | Explicit caller ID; otherwise Ringee resolves one                                            |
+| `agentEmail`        | string | Conditional | Ringee member who will place the call; required in organizations unless `ownerEmail` is sent |
+| `ownerEmail`        | string | Conditional | Alias for `agentEmail` when your CRM models a record owner                                   |
+| `ownerExternalId`   | string | No          | Reserved; it cannot currently resolve the agent by itself                                    |
+
+Send at least `contactExternalId` or `phoneNumber`. If both resolve a destination, the explicit `phoneNumber` wins. An unknown `contactExternalId` can still be used with `phoneNumber`, and the returned `contactId` will be `null`.
+
+## Response
+
+A successful request returns **201 Created**:
+
+```json
+{
+  "contactId": "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55",
+  "agentUserId": "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0",
+  "toNumber": "+14155550123",
+  "fromNumber": "+14155550100",
+  "dialerUrl": "https://app.ringee.io/dashboard/dialer?session=…",
+  "sessionToken": "eyJhbGciOi…",
+  "expiresAt": "2026-09-04T14:05:00.000Z"
+}
+```
+
+| Field          | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| `contactId`    | Ringee contact UUID, or `null` when calling a raw number  |
+| `agentUserId`  | Ringee user authorized for the call                       |
+| `toNumber`     | Resolved destination number                               |
+| `fromNumber`   | Selected caller ID                                        |
+| `dialerUrl`    | URL to open in the browser; valid for **5 minutes**       |
+| `sessionToken` | Same signed authorization already embedded in `dialerUrl` |
+| `expiresAt`    | ISO-8601 expiry for the session                           |
+
 <Warning>
-Your frontend only needs `dialerUrl` and `expiresAt`. Never return `sessionToken` to the browser, never persist it, and never write it to logs — it authorizes a call on the agent's behalf.
+  Pass only `dialerUrl` and `expiresAt` to your frontend. Do not expose the
+  separate `sessionToken` field, persist it, or write it to logs. The token is
+  already inside `dialerUrl`, so treat that URL as sensitive and short-lived
+  too.
 </Warning>
 
 ## Agent resolution
 
-| Workspace | Behavior |
-|---|---|
-| Personal | The workspace owner always places the call. `agentEmail` is ignored. |
+| Workspace    | Behavior                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Personal     | The workspace owner always places the call. `agentEmail` is ignored.                                                                                   |
 | Organization | `agentEmail` (or `ownerEmail`) must match a member of that organization, or the request fails with <span className="rg-badge rg-sensitive">422</span>. |
 
 <Warning>
-Take `agentEmail` from your **authenticated session**, not from a value the browser sent. Otherwise any user could place calls as any colleague.
+  Take `agentEmail` from your **authenticated session**, not from a value the
+  browser sent. Otherwise any user could place calls as any colleague.
 </Warning>
 
 `ownerExternalId` is accepted in the payload but is not yet wired to a resolution strategy — sending it without `agentEmail` returns `422`. Use `agentEmail`.
 
 ## Caller ID resolution
 
-When you do not send `fromNumber`, Ringee picks one in this order:
+An explicit `fromNumber` is normalized and used as the caller ID. When you do not send it, Ringee picks one in this order:
 
 1. the agent's first active **verified caller ID** in that workspace;
 2. any **purchased number** on the workspace;
@@ -82,19 +138,27 @@ Do not request a dialer URL on page load. Calls must start from a real click.
 
 ## Errors
 
-| Status | Cause |
-|---|---|
-| <span className="rg-badge rg-sensitive">400</span> | Neither `contactExternalId` (linked to a contact) nor `phoneNumber` was provided. |
-| <span className="rg-badge rg-destructive">401</span> | Missing or invalid `X-Ringee-Api-Key`. |
-| <span className="rg-badge rg-sensitive">422</span> | `agentEmail` missing on an organization workspace, no member matched the email, or no caller ID is available. |
+| Status                                               | Cause                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| <span className="rg-badge rg-sensitive">400</span>   | Neither `contactExternalId` (linked to a contact) nor `phoneNumber` was provided.                             |
+| <span className="rg-badge rg-destructive">401</span> | Missing or invalid `X-Ringee-Api-Key`.                                                                        |
+| <span className="rg-badge rg-sensitive">422</span>   | `agentEmail` missing on an organization workspace, no member matched the email, or no caller ID is available. |
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Receive the call back" icon="webhook" href="/api/outbound-webhooks">
+  <Card
+    title="Receive the call back"
+    icon="webhook"
+    href="/api/outbound-webhooks"
+  >
     Log the call in your CRM when it ends
   </Card>
-  <Card title="Embed the dialer instead" icon="phone" href="/dialer-sdk/overview">
+  <Card
+    title="Embed the dialer instead"
+    icon="phone"
+    href="/dialer-sdk/overview"
+  >
     Keep agents inside your own UI
   </Card>
 </CardGroup>

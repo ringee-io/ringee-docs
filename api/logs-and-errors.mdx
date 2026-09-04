@@ -1,69 +1,87 @@
 ---
 title: Logs and errors
-description: 'Debug inbound events and outbound deliveries'
+description: "Debug inbound events and outbound deliveries"
 ---
 
-Every event in both directions is logged and inspectable — from the dashboard or through the administrative API.
+Accepted inbound events and queued outbound deliveries are inspectable from the dashboard or the management API. A duplicate inbound `eventId` is returned as `skipped` without creating another row, and the immediate `test.ping` action is not stored as a delivery.
 
 ## Where to look
 
-| Symptom | Look at |
-|---|---|
-| Your event never appeared in Ringee | **Inbound logs** |
-| Ringee never called your endpoint | **Outbound logs** |
+| Symptom                                   | Look at                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| Your event never appeared in Ringee       | **Inbound logs**                                                 |
+| Ringee never called your endpoint         | **Outbound logs**                                                |
 | Ringee called you but nothing was created | Your own idempotency table — the event was probably deduplicated |
-| Everything stopped at once | Integration status, and whether the API key was rotated |
+| Everything stopped at once                | Integration status, and whether the API key was rotated          |
 
 In the dashboard: **Integrations → Custom Integrations → Configure**, then the inbound and outbound log tabs.
 
 ## Log endpoints
 
-Both require an admin dashboard session and support cursor pagination.
+Both require an admin dashboard session and return newest-first arrays.
 
 ```http
 GET /api/integrations/custom/:id/inbound-logs?limit=50&cursor=…
 GET /api/integrations/custom/:id/outbound-logs?limit=50&cursor=…
 ```
 
-**Inbound logs** record every event you sent: the event type, your `eventId`, the raw payload, the processing status (`processing`, `processed`, `failed`, plus deduplicated ones) and the error message when it failed.
+`limit` defaults to 50 and is capped at 200. To load the next page, pass the last returned row's `id` as `cursor`.
 
-**Outbound logs** record every delivery attempt: destination URL, payload, attempt count, HTTP status, latency, next scheduled retry and the last error.
+**Inbound rows** contain `id`, `integrationId`, `eventType`, `externalEventId`, `status`, `receivedAt`, `processedAt`, `errorMessage` and `rawPayload`. Their normal lifecycle is `received` → `processing` → `processed` or `failed`.
+
+**Outbound rows** contain `id`, `integrationId`, `eventType`, `subjectId`, `destinationUrl`, `payload`, `signature`, `status`, `attemptCount`, `lastError`, `nextAttemptAt`, `sentAt`, `dedupeKey`, `createdAt` and `updatedAt`. Status is `pending`, `sending`, `sent` or `failed`.
+
+<Note>
+  Outbound logging is one aggregate row per delivery, not one row per attempt.
+  `attemptCount` counts failed attempts and `lastError` stores only the most
+  recent failure. HTTP status and latency are returned by **Test webhook**, but
+  are not persisted for each queued attempt.
+</Note>
 
 ## Inbound errors
 
 These are returned synchronously to your request.
 
-| Status | Message | Fix |
-|---|---|---|
-| `401` | `Invalid API key format` | The header is missing or the value is not a well-formed `cik_live_` key. |
-| `401` | `Invalid API key` | The key does not match any integration — it was likely rotated. |
-| `401` | `Integration is disabled` | Re-enable the integration in the dashboard. |
-| `400` | `body must be a JSON object` | Send `Content-Type: application/json` and a JSON object. |
-| `400` | `event is required` | Add `event` to the envelope. |
-| `400` | `eventId is required` | Add a unique `eventId`. |
-| `400` | `occurredAt is required` | Add an ISO-8601 `occurredAt`. |
-| `400` | `data must be an object` | `data` must be a JSON object, even when nearly empty. |
-| `400` | `Unsupported event: …` | Only `contact.upserted`, `company.upserted`, `contact.deleted` and `company.deleted` are accepted inbound. |
+```json
+{
+  "statusCode": 400,
+  "message": "eventId is required",
+  "error": "Bad Request"
+}
+```
+
+| Status | Message                      | Fix                                                                                                        |
+| ------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `401`  | `Invalid API key format`     | The header is missing or the value is not a well-formed `cik_live_` key.                                   |
+| `401`  | `Invalid API key`            | The key does not match any integration — it was likely rotated.                                            |
+| `401`  | `Integration is disabled`    | Re-enable the integration in the dashboard.                                                                |
+| `400`  | `body must be a JSON object` | Send `Content-Type: application/json` and a JSON object.                                                   |
+| `400`  | `event is required`          | Add `event` to the envelope.                                                                               |
+| `400`  | `eventId is required`        | Add a unique `eventId`.                                                                                    |
+| `400`  | `occurredAt is required`     | Add an ISO-8601 `occurredAt`.                                                                              |
+| `400`  | `data must be an object`     | `data` must be a JSON object, even when nearly empty.                                                      |
+| `400`  | `Unsupported event: …`       | Only `contact.upserted`, `company.upserted`, `contact.deleted` and `company.deleted` are accepted inbound. |
 
 A `202` with `"status": "failed"` means the event was accepted, stored and then rejected during processing — for example a missing required field inside `data`. The reason is in `message` and in the inbound log.
 
 <Warning>
-Resending a failed event with the **same** `eventId` returns `skipped`, not a retry. Fix the payload and send it with a **new** `eventId`.
+  Resending a failed event with the **same** `eventId` returns `skipped`, not a
+  retry. Fix the payload and send it with a **new** `eventId`.
 </Warning>
 
 ## Outbound delivery failures
 
 A delivery is retried when your endpoint returns a non-2xx status, times out after 15 seconds, or is unreachable.
 
-| Recorded error | Meaning |
-|---|---|
-| `HTTP 4xx` / `HTTP 5xx` | Your endpoint responded with a non-2xx status. |
-| Timeout or network error | No response within 15 seconds, or the host could not be reached. |
-| `integration not found` | The integration was deleted while the delivery was queued. |
-| `integration disabled` | The integration's status is no longer `active`. |
-| `no outbound URL configured` | Returned by **Test webhook** when no URL is set. |
+| Recorded error               | Meaning                                                          |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `HTTP 4xx` / `HTTP 5xx`      | Your endpoint responded with a non-2xx status.                   |
+| Timeout or network error     | No response within 15 seconds, or the host could not be reached. |
+| `integration not found`      | The integration was deleted while the delivery was queued.       |
+| `integration disabled`       | The integration's status is no longer `active`.                  |
+| `no outbound URL configured` | Returned by **Test webhook** when no URL is set.                 |
 
-After 10 failed attempts the delivery is marked `failed` and Ringee emails the workspace to say the endpoint is down.
+After 10 failed attempts the delivery is marked `failed`. Ringee sends email and device push notifications to the integration owner or organization admins, throttled to at most one alert per integration every six hours.
 
 ## Common causes
 

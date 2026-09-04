@@ -1,9 +1,9 @@
 ---
 title: Outbound webhooks
-description: 'Receive Ringee call activity in your CRM, verified and idempotent'
+description: "Receive Ringee call activity in your CRM, verified and idempotent"
 ---
 
-Ringee pushes call activity to the HTTPS endpoint you configure on your Custom Integration. Every delivery is **HMAC-signed** and retried until your endpoint acknowledges it.
+Ringee pushes the events selected on your Custom Integration to its configured HTTP(S) endpoint. Every delivery is **HMAC-signed** and retried up to 10 times until your endpoint acknowledges it.
 
 ## Configure the endpoint
 
@@ -14,7 +14,10 @@ In **Integrations → Custom Integrations → Configure → Settings**:
 3. Click **Test webhook** to send a `test.ping`.
 
 <Note>
-The endpoint must be reachable from the public internet and must **not** require your own auth token — Ringee authenticates by signing the body, not by sending credentials. Disable JWT verification on the route and verify the signature instead.
+  The endpoint must be reachable from the public internet and must **not**
+  require your own auth token — Ringee authenticates by signing the body, not by
+  sending credentials. Disable JWT verification on the route and verify the
+  signature instead.
 </Note>
 
 ## Delivery format
@@ -40,7 +43,8 @@ Ringee-Timestamp: 1747999938
 ## Verify the signature
 
 <Warning>
-Read the request body as **raw text** first. Parsing the JSON before verifying — or re-serializing it — changes the bytes and the signature will never match.
+  Read the request body as **raw text** first. Parsing the JSON before verifying
+  — or re-serializing it — changes the bytes and the signature will never match.
 </Warning>
 
 The signature is `HMAC_SHA256(signingSecret, "<timestamp>.<rawBody>")`, hex-encoded.
@@ -93,6 +97,7 @@ export function verifyRingeeWebhook(
   const signature = parts.v1;
   if (!timestamp || !signature) return false;
   if (timestamp !== timestampHeader) return false;
+  if (!/^[0-9a-f]{64}$/i.test(signature)) return false;
 
   const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
   if (!Number.isFinite(age) || age > TOLERANCE_SECONDS) return false;
@@ -156,17 +161,21 @@ Deno.serve(async (req) => {
 </CodeGroup>
 
 <Info>
-The Edge Function that receives Ringee webhooks must have `verify_jwt = false`. Ringee does not send a Supabase JWT — the HMAC signature is the authentication.
+  The Edge Function that receives Ringee webhooks must have `verify_jwt =
+  false`. Ringee does not send a Supabase JWT — the HMAC signature is the
+  authentication.
 </Info>
 
 ## Respond correctly
 
-| Rule | Detail |
-|---|---|
-| Respond fast | Ringee aborts the request after **15 seconds**. |
-| Respond `2xx` | Anything else counts as a failed delivery and is retried. |
-| Do the work after | Acknowledge first, process asynchronously if your handler is slow. |
-| Answer `test.ping` | Return `200` with `{ "received": true, "event": "test.ping" }`. |
+| Rule               | Detail                                                             |
+| ------------------ | ------------------------------------------------------------------ |
+| Respond fast       | Ringee aborts the request after **15 seconds**.                    |
+| Respond `2xx`      | Anything else counts as a failed delivery and is retried.          |
+| Do the work after  | Acknowledge first, process asynchronously if your handler is slow. |
+| Answer `test.ping` | Any `2xx` response succeeds; the response body is ignored.         |
+
+`200 { "received": true }` and `204 No Content` are both valid acknowledgements.
 
 ## Idempotency
 
@@ -192,17 +201,19 @@ Insert the `eventId` **before** processing. If the insert conflicts, the event i
 
 ## Retries
 
-| Setting | Value |
-|---|---|
-| Max attempts | 10 |
-| Backoff | Exponential from 2s, doubling per attempt |
-| Backoff cap | 5 minutes |
-| Request timeout | 15 seconds |
+| Setting         | Value                                     |
+| --------------- | ----------------------------------------- |
+| Max attempts    | 10                                        |
+| Backoff         | Exponential from 2s, doubling per attempt |
+| Backoff cap     | 5 minutes                                 |
+| Request timeout | 15 seconds                                |
 
-After the final attempt the delivery is marked `failed` and Ringee notifies the workspace that the endpoint is down. Deliveries are also failed immediately if the integration has been disabled or deleted.
+After the final attempt the delivery is marked `failed` and Ringee sends email and device push notifications to the integration owner or organization admins. Alerts are throttled per integration for six hours. Deliveries are also failed immediately if the integration has been disabled or deleted.
 
 <Tip>
-Inspect every attempt in the dashboard, or via `GET /api/integrations/custom/:id/outbound-logs`. See [Logs and errors](/api/logs-and-errors).
+  Inspect the delivery status, cumulative attempt count and last error in the
+  dashboard, or via `GET /api/integrations/custom/:id/outbound-logs`. See [Logs
+  and errors](/api/logs-and-errors).
 </Tip>
 
 ## Event ordering
@@ -221,7 +232,11 @@ Design for this:
   <Card title="Event reference" icon="list" href="/api/events-reference">
     Every outbound payload, field by field
   </Card>
-  <Card title="Build an integration" icon="wrench" href="/api/build-an-integration">
+  <Card
+    title="Build an integration"
+    icon="wrench"
+    href="/api/build-an-integration"
+  >
     Mapping, loop prevention and a test checklist
   </Card>
 </CardGroup>

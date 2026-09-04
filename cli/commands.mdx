@@ -1,6 +1,6 @@
 ---
 title: Command reference
-description: 'Every ringee CLI command, argument and flag'
+description: "Every ringee CLI command, argument and flag"
 ---
 
 Add `--json` to any command for raw, machine-readable output.
@@ -14,33 +14,52 @@ Phone numbers are **E.164** (`+14155552671`). Datetimes are **ISO-8601 with an o
 ## Every command at a glance
 
 <div className="rg-legend">
-  <span className="rg-badge rg-read">Read</span> looks, never changes anything &nbsp;·&nbsp;
-  <span className="rg-badge rg-write">Write</span> creates or updates a record &nbsp;·&nbsp;
-  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints a shareable link &nbsp;·&nbsp;
-  <span className="rg-badge rg-destructive">Destructive</span> removes access or data
+  <span className="rg-badge rg-read">Read</span> looks, never changes anything
+  &nbsp;·&nbsp;
+  <span className="rg-badge rg-write">Write</span> creates or updates a record
+  &nbsp;·&nbsp;
+  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints
+  a shareable link &nbsp;·&nbsp;
+  <span className="rg-badge rg-destructive">Destructive</span> removes access or
+  data
 </div>
 
-| Command | Type | Guard |
-|---|---|---|
-| [`contacts search`](#contacts-search) | <span className="rg-badge rg-read">Read</span> | — |
-| [`contacts get`](#contacts-get) | <span className="rg-badge rg-read">Read</span> | — |
-| [`contacts by-outcome`](#contacts-by-outcome) | <span className="rg-badge rg-read">Read</span> | — |
-| [`contacts create`](#contacts-create) | <span className="rg-badge rg-write">Write</span> | — |
-| [`contacts update`](#contacts-update) | <span className="rg-badge rg-write">Write</span> | — |
-| [`contacts delete`](#contacts-delete) | <span className="rg-badge rg-destructive">Destructive</span> | `--confirm-phone` + `--yes` |
-| [`leads search`](#leads-search) | <span className="rg-badge rg-read">Read</span> | — |
-| [`leads reveal`](#leads-reveal) | <span className="rg-badge rg-sensitive">Sensitive</span> | `--yes` |
-| [`leads import`](#leads-import) | <span className="rg-badge rg-write">Write</span> | — |
-| [`sessions create`](#sessions-create) | <span className="rg-badge rg-sensitive">Sensitive</span> | `--yes` |
-| [`sessions get`](#sessions-get) | <span className="rg-badge rg-read">Read</span> | — |
-| [`sessions update`](#sessions-update) | <span className="rg-badge rg-write">Write</span> | — |
-| [`sessions revoke`](#sessions-revoke) | <span className="rg-badge rg-destructive">Destructive</span> | `--yes` |
-| [`calls list`](#calls-list) | <span className="rg-badge rg-read">Read</span> | — |
-| [`outcomes log`](#outcomes-log) | <span className="rg-badge rg-write">Write</span> | — |
-| [`callbacks create`](#callbacks-create) | <span className="rg-badge rg-write">Write</span> | — |
-| [`meetings schedule`](#meetings-schedule) | <span className="rg-badge rg-write">Write</span> | — |
-| [`config show`](#config-and-knowledge) / [`config check`](#config-and-knowledge) | <span className="rg-badge rg-read">Read</span> | — |
-| [`tools`](#config-and-knowledge) / [`flow`](#config-and-knowledge) / [`prompt`](#config-and-knowledge) | <span className="rg-badge rg-read">Read</span> | works offline |
+| Command                                                                                                | Type                                                         | Guard                       |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------- |
+| [`contacts search`](#contacts-search)                                                                  | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`contacts get`](#contacts-get)                                                                        | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`contacts by-outcome`](#contacts-by-outcome)                                                          | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`contacts create`](#contacts-create)                                                                  | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`contacts update`](#contacts-update)                                                                  | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`contacts delete`](#contacts-delete)                                                                  | <span className="rg-badge rg-destructive">Destructive</span> | `--confirm-phone` + `--yes` |
+| [`leads search`](#leads-search)                                                                        | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`leads reveal`](#leads-reveal)                                                                        | <span className="rg-badge rg-sensitive">Sensitive</span>     | `--yes`                     |
+| [`leads import`](#leads-import)                                                                        | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`sessions create`](#sessions-create)                                                                  | <span className="rg-badge rg-sensitive">Sensitive</span>     | `--yes`                     |
+| [`sessions get`](#sessions-get)                                                                        | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`sessions update`](#sessions-update)                                                                  | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`sessions revoke`](#sessions-revoke)                                                                  | <span className="rg-badge rg-destructive">Destructive</span> | `--yes`                     |
+| [`calls list`](#calls-list)                                                                            | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`outcomes log`](#outcomes-log)                                                                        | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`callbacks create`](#callbacks-create)                                                                | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`callbacks list`](#callbacks-list)                                                                    | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`meetings schedule`](#meetings-schedule)                                                              | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`campaigns list`](#campaigns-list) / [`campaigns get`](#campaigns-get)                                | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`campaigns status`](#campaigns-status)                                                                | <span className="rg-badge rg-write">Write</span>             | org admin                   |
+| [`campaigns leads`](#campaigns-leads)                                                                  | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`campaigns add-lead`](#campaigns-add-lead) / [`campaigns import-leads`](#campaigns-import-leads)      | <span className="rg-badge rg-write">Write</span>             | org admin                   |
+| [`campaigns delete-lead`](#campaigns-delete-lead)                                                      | <span className="rg-badge rg-destructive">Destructive</span> | `--yes` + org admin         |
+| [`campaigns analytics`](#campaigns-analytics)                                                          | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`analytics calls`](#analytics-calls) / [`analytics day`](#analytics-day)                              | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`dnc list`](#dnc-list)                                                                                | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`dnc add`](#dnc-add)                                                                                  | <span className="rg-badge rg-write">Write</span>             | —                           |
+| [`dnc remove`](#dnc-remove)                                                                            | <span className="rg-badge rg-destructive">Destructive</span> | `--yes`                     |
+| [`pipelines list`](#pipelines-list) / [`pipelines results`](#pipelines-results)                        | <span className="rg-badge rg-read">Read</span>               | admin policy                |
+| [`voice-agents list`](#voice-agents-list)                                                              | <span className="rg-badge rg-read">Read</span>               | organization                |
+| [`voice-agents call`](#voice-agents-call)                                                              | <span className="rg-badge rg-sensitive">Sensitive</span>     | `--yes` + organization      |
+| [`voice-agents call-result`](#voice-agents-call-result)                                                | <span className="rg-badge rg-read">Read</span>               | organization                |
+| [`config show`](#config-and-knowledge) / [`config check`](#config-and-knowledge)                       | <span className="rg-badge rg-read">Read</span>               | —                           |
+| [`tools`](#config-and-knowledge) / [`flow`](#config-and-knowledge) / [`prompt`](#config-and-knowledge) | <span className="rg-badge rg-read">Read</span>               | works offline               |
 
 ## Contacts
 
@@ -52,9 +71,9 @@ ringee contacts search <query...>
 
 Search by name, phone, email or company.
 
-| Option | Description |
-|---|---|
-| `-p, --page <n>` | Page number |
+| Option            | Description       |
+| ----------------- | ----------------- |
+| `-p, --page <n>`  | Page number       |
 | `-l, --limit <n>` | Page size, max 50 |
 
 ```bash
@@ -78,12 +97,12 @@ ringee contacts by-outcome <outcomes...>
 
 Find contacts whose calls reached given outcomes — useful for deriving an ICP from closed business.
 
-| Option | Description |
-|---|---|
-| `--match <any\|last>` | `any` matches any call; `last` only the most recent |
-| `--include-unreachable` | Include `doNotCall` and `unsubscribed` contacts |
-| `-p, --page <n>` | Page number |
-| `-l, --limit <n>` | Page size, max 50 |
+| Option                  | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `--match <any\|last>`   | `any` matches any call; `last` only the most recent |
+| `--include-unreachable` | Include `doNotCall` and `unsubscribed` contacts     |
+| `-p, --page <n>`        | Page number                                         |
+| `-l, --limit <n>`       | Page size, max 50                                   |
 
 ```bash
 ringee contacts by-outcome sale interested --match last
@@ -93,15 +112,15 @@ Valid outcomes: `meeting_booked`, `sale`, `interested`, `follow_up`, `callback_s
 
 ### `contacts create`
 
-| Option | Description |
-|---|---|
-| `--phone <e164>` | **Required.** Must be unique in the workspace |
-| `--name <name>` | Display name |
-| `--first <firstName>` / `--last <lastName>` | Name parts |
-| `--email <email>` | Email |
-| `--title <jobTitle>` | Job title |
-| `--company <organization>` | Company name |
-| `--note <note>` | Initial note |
+| Option                                      | Description                                   |
+| ------------------------------------------- | --------------------------------------------- |
+| `--phone <e164>`                            | **Required.** Must be unique in the workspace |
+| `--name <name>`                             | Display name                                  |
+| `--first <firstName>` / `--last <lastName>` | Name parts                                    |
+| `--email <email>`                           | Email                                         |
+| `--title <jobTitle>`                        | Job title                                     |
+| `--company <organization>`                  | Company name                                  |
+| `--note <note>`                             | Initial note                                  |
 
 ```bash
 ringee contacts create --phone +14155552671 --name "Ada Lovelace" --company "Babbage Engines"
@@ -124,7 +143,8 @@ ringee contacts delete <contactId>
 <span className="rg-badge rg-destructive">Destructive</span>
 
 <Warning>
-**Destructive.** Requires both `--confirm-phone` matching the stored number **and** `--yes`.
+  **Destructive.** Requires both `--confirm-phone` matching the stored number
+  **and** `--yes`.
 </Warning>
 
 ```bash
@@ -140,18 +160,18 @@ Prospecting uses your connected enrichment provider. These commands never spend 
 
 Returns a `jobId` you pass to `reveal` and `import`.
 
-| Option | Description |
-|---|---|
-| `--provider <name>` | `apollo` or `prospeo`. Auto-selected when omitted |
-| `--keywords <text>` | Free-text keywords |
-| `--title <t>` | Job title (repeatable or comma-separated) |
-| `--seniority <s>` | Seniority (repeatable) |
-| `--department <d>` | Department (repeatable) |
-| `--industry <i>` | Industry (repeatable) |
-| `--country <c>` / `--city <c>` | Person location (repeatable) |
-| `--company <name>` / `--domain <d>` | Company filters (repeatable) |
-| `--has-email` / `--has-phone` | Only candidates with that field |
-| `--page <n>` / `--per-page <n>` | Pagination, max 25 per page |
+| Option                              | Description                                       |
+| ----------------------------------- | ------------------------------------------------- |
+| `--provider <name>`                 | `apollo` or `prospeo`. Auto-selected when omitted |
+| `--keywords <text>`                 | Free-text keywords                                |
+| `--title <t>`                       | Job title (repeatable or comma-separated)         |
+| `--seniority <s>`                   | Seniority (repeatable)                            |
+| `--department <d>`                  | Department (repeatable)                           |
+| `--industry <i>`                    | Industry (repeatable)                             |
+| `--country <c>` / `--city <c>`      | Person location (repeatable)                      |
+| `--company <name>` / `--domain <d>` | Company filters (repeatable)                      |
+| `--has-email` / `--has-phone`       | Only candidates with that field                   |
+| `--page <n>` / `--per-page <n>`     | Pagination, max 25 per page                       |
 
 ```bash
 ringee leads search --title "VP Sales" --country US --industry Software
@@ -163,14 +183,15 @@ ringee leads search --title "VP Sales" --country US --industry Software
 ringee leads reveal <jobId> <externalId>
 ```
 
-<span className="rg-badge rg-sensitive">Sensitive</span> <span className="rg-badge rg-neutral">Spends provider credits</span>
+<span className="rg-badge rg-sensitive">Sensitive</span>
+<span className="rg-badge rg-neutral">Spends provider credits</span>
 
 Unlocks email — and optionally phone — and upserts a Ringee contact.
 
-| Option | Description |
-|---|---|
-| `--phone` | Also reveal a mobile phone (extra provider credits) |
-| `-y, --yes` | **Required.** Confirms the credit spend |
+| Option      | Description                                         |
+| ----------- | --------------------------------------------------- |
+| `--phone`   | Also reveal a mobile phone (extra provider credits) |
+| `-y, --yes` | **Required.** Confirms the credit spend             |
 
 ### `leads import`
 
@@ -188,21 +209,22 @@ Bulk-imports candidates as contacts, deduplicated by phone number. Does not reve
 
 Mints a magic link someone can open to dial through a queue without logging in.
 
-| Option | Description |
-|---|---|
-| `--contact <id>` | Contact in the queue (repeatable) |
-| `--phone <e164>` | Raw phone in the queue (repeatable) |
-| `--title <title>` | Session title |
-| `--campaign <campaignId>` | Attribute calls to a campaign |
-| `--max-calls <n>` | Auto-complete after N calls |
-| `-y, --yes` | **Required.** Confirms minting a shareable link |
+| Option                    | Description                                     |
+| ------------------------- | ----------------------------------------------- |
+| `--contact <id>`          | Contact in the queue (repeatable)               |
+| `--phone <e164>`          | Raw phone in the queue (repeatable)             |
+| `--title <title>`         | Session title                                   |
+| `--campaign <campaignId>` | Attribute calls to a campaign                   |
+| `--max-calls <n>`         | Auto-complete after N calls                     |
+| `-y, --yes`               | **Required.** Confirms minting a shareable link |
 
 ```bash
 ringee sessions create --contact <id> --contact <id> --title "Tue outbound" --yes
 ```
 
 <Warning>
-The join URL is printed **once** and cannot be re-fetched. Share it only with someone authorized to call on the workspace's behalf.
+  The join URL is printed **once** and cannot be re-fetched. Share it only with
+  someone authorized to call on the workspace's behalf.
 </Warning>
 
 ### `sessions get`
@@ -219,11 +241,11 @@ Status and progress. Never prints the raw token.
 ringee sessions update <callSessionId>
 ```
 
-| Option | Description |
-|---|---|
-| `--title <title>` | New title |
+| Option                    | Description                         |
+| ------------------------- | ----------------------------------- |
+| `--title <title>`         | New title                           |
 | `--campaign <campaignId>` | Set a campaign, or `null` to detach |
-| `--expires <minutes>` | Extend validity |
+| `--expires <minutes>`     | Extend validity                     |
 
 ### `sessions revoke`
 
@@ -234,7 +256,8 @@ ringee sessions revoke <callSessionId>
 <span className="rg-badge rg-destructive">Destructive</span>
 
 <Warning>
-**Destructive.** Requires `--yes`. The link stops working immediately; call history is preserved.
+  **Destructive.** Requires `--yes`. The link stops working immediately; call
+  history is preserved.
 </Warning>
 
 ## Calls and follow-ups
@@ -243,14 +266,14 @@ ringee sessions revoke <callSessionId>
 
 Full call detail, newest first.
 
-| Option | Description |
-|---|---|
-| `--contact <contactId>` | Filter to one contact |
-| `--outcome <outcomes...>` | Filter by logged outcome |
-| `--status <statuses...>` | Filter by status, e.g. `completed` |
-| `--from <iso>` / `--to <iso>` | Created-at range |
-| `--full` | Print the full transcription instead of a preview |
-| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50 |
+| Option                               | Description                                       |
+| ------------------------------------ | ------------------------------------------------- |
+| `--contact <contactId>`              | Filter to one contact                             |
+| `--outcome <outcomes...>`            | Filter by logged outcome                          |
+| `--status <statuses...>`             | Filter by status, e.g. `completed`                |
+| `--from <iso>` / `--to <iso>`        | Created-at range                                  |
+| `--full`                             | Print the full transcription instead of a preview |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50                                |
 
 ```bash
 ringee calls list --outcome sale --from 2026-05-01T00:00:00Z --full
@@ -262,8 +285,8 @@ ringee calls list --outcome sale --from 2026-05-01T00:00:00Z --full
 ringee outcomes log <callId> <outcome>
 ```
 
-| Option | Description |
-|---|---|
+| Option          | Description              |
+| --------------- | ------------------------ |
 | `--note <note>` | Free-text follow-up note |
 
 ### `callbacks create`
@@ -272,14 +295,27 @@ ringee outcomes log <callId> <outcome>
 ringee callbacks create <contactId> <scheduledAt>
 ```
 
-| Option | Description |
-|---|---|
+| Option            | Description    |
+| ----------------- | -------------- |
 | `--call <callId>` | Source call id |
-| `--note <note>` | Free-text note |
+| `--note <note>`   | Free-text note |
 
 ```bash
 ringee callbacks create <contactId> 2026-05-24T10:00:00-04:00 --note "Asked for Monday"
 ```
+
+### `callbacks list`
+
+```text
+ringee callbacks list
+```
+
+Lists callbacks soonest first, with the contact and originating campaign.
+
+| Option                               | Description                                                             |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `--status <status>`                  | `scheduled`, `due`, `in_progress`, `completed`, `missed` or `cancelled` |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50                                                      |
 
 ### `meetings schedule`
 
@@ -287,32 +323,315 @@ ringee callbacks create <contactId> 2026-05-24T10:00:00-04:00 --note "Asked for 
 ringee meetings schedule <contactId> <scheduledAt>
 ```
 
-| Option | Description |
-|---|---|
-| `--title <title>` | Meeting title |
-| `--duration <minutes>` | Defaults to 30 |
-| `--location <location>` | Address or video URL |
-| `--notes <notes>` | Notes |
+| Option                    | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `--title <title>`         | Meeting title                                          |
+| `--duration <minutes>`    | Defaults to 30                                         |
+| `--location <location>`   | Address or video URL                                   |
+| `--email <attendeeEmail>` | Send an external calendar invitation when connected    |
+| `--call <callId>`         | Source call; also sets its outcome to `meeting_booked` |
+| `--notes <notes>`         | Notes                                                  |
+
+## Campaigns
+
+Campaign commands require an active organization workspace. Every write is restricted to organization admins.
+
+### `campaigns list`
+
+```text
+ringee campaigns list
+```
+
+| Option                               | Description                                |
+| ------------------------------------ | ------------------------------------------ |
+| `-s, --search <text>`                | Filter by name or description              |
+| `--status <status>`                  | `draft`, `active`, `paused` or `completed` |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50                         |
+
+### `campaigns get`
+
+```text
+ringee campaigns get <campaignId>
+```
+
+Returns the campaign configuration, lead count, dialer mode, attempts, retry delay, wrap-up time and working hours.
+
+### `campaigns status`
+
+```text
+ringee campaigns status <campaignId> <status>
+```
+
+The server accepts only these transitions:
+
+- `draft` → `active`
+- `active` → `paused` or `completed`
+- `paused` → `active` or `completed`
+- `completed` is terminal
+
+Activating a campaign also requires at least one lead, one configured disposition and a usable outbound number.
+
+### `campaigns leads`
+
+```text
+ringee campaigns leads <campaignId>
+```
+
+| Option                               | Description                                                                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--status <status>`                  | `pending`, `queued`, `locked`, `dialing`, `in_call`, `wrap_up`, `dispositioned`, `scheduled`, `completed`, `exhausted`, `dnc`, `called` or `dead` |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50                                                                                                                                |
+
+### `campaigns add-lead`
+
+```text
+ringee campaigns add-lead <campaignId> --phone <e164> --name <name>
+```
+
+Reuses an existing contact with the same phone number when one exists.
+
+| Option                | Description                     |
+| --------------------- | ------------------------------- |
+| `--phone <e164>`      | **Required.** Lead phone number |
+| `--name <name>`       | **Required.** Lead name         |
+| `--email <email>`     | Email                           |
+| `--company <company>` | Company                         |
+| `--title <jobTitle>`  | Job title                       |
+| `--state <state>`     | State or region                 |
+| `--website <website>` | Website                         |
+
+### `campaigns import-leads`
+
+```text
+ringee campaigns import-leads <campaignId> <file>
+```
+
+The file must contain a non-empty JSON array with at most 200 entries:
+
+```json
+[
+  {
+    "name": "Ada Lovelace",
+    "phone": "+14155552671",
+    "email": "ada@example.com",
+    "company": "Analytical Engines",
+    "jobTitle": "Founder",
+    "state": "CA",
+    "website": "https://example.com"
+  }
+]
+```
+
+### `campaigns delete-lead`
+
+```text
+ringee campaigns delete-lead <campaignId> <leadId> --yes
+```
+
+<Warning>
+  **Destructive.** Removes the lead, its call attempts and its campaign
+  callbacks. The underlying contact is preserved. A lead that is locked,
+  dialing, in a call or wrapping up cannot be removed.
+</Warning>
+
+### `campaigns analytics`
+
+```text
+ringee campaigns analytics <campaignId>
+```
+
+| Option                        | Description                              |
+| ----------------------------- | ---------------------------------------- |
+| `--from <iso>` / `--to <iso>` | Reporting window                         |
+| `--no-agents`                 | Skip the per-agent breakdown             |
+| `--hourly`                    | Include the hourly call-volume histogram |
+
+The result includes attempts, connections, conversions, rates, handle time, dispositions and lead status totals.
+
+## Analytics
+
+### `analytics calls`
+
+```text
+ringee analytics calls
+```
+
+Reads the same call-performance data shown on the dashboard overview.
+
+| Option                          | Description                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `-r, --range <range>`           | `today`, `yesterday`, `7d`, `30d`, `this_month` or `last_month`                  |
+| `--from <iso>` / `--to <iso>`   | Custom reporting window                                                          |
+| `--campaign <campaignId\|none>` | One campaign, or only calls outside campaigns                                    |
+| `--outcome <outcome>`           | Restrict every metric to one outcome                                             |
+| `--scope <scope>`               | `personal` or `organization`                                                     |
+| `--member <userId>`             | One member; organization admins only                                             |
+| `--include <blocks...>`         | Any of `kpis`, `funnel`, `by-outcome`, `over-time`, `best-time-of-day`, `agents` |
+
+If `--include` is omitted, Ringee computes `kpis`, `funnel` and `by-outcome`.
+
+```bash
+ringee analytics calls --range 30d --campaign none
+ringee analytics calls --scope organization --include kpis agents
+```
+
+### `analytics day`
+
+```text
+ringee analytics day <YYYY-MM-DD>
+```
+
+Returns calls, callbacks and meetings for one calendar day.
+
+| Option                          | Description                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| `--offset <utcOffset>`          | Day boundary offset, for example `-04:00`; defaults to UTC |
+| `--campaign <campaignId\|none>` | One campaign, or calls outside campaigns                   |
+| `--outcome <outcomes...>`       | Include only these call outcomes                           |
+| `--no-callbacks`                | Skip callbacks                                             |
+| `--no-meetings`                 | Skip meetings                                              |
+| `-l, --limit <n>`               | Maximum calls returned, default 50 and max 100             |
+
+## Do-not-call list
+
+### `dnc list`
+
+```text
+ringee dnc list
+```
+
+| Option                               | Description                     |
+| ------------------------------------ | ------------------------------- |
+| `-s, --search <fragment>`            | Filter by phone-number fragment |
+| `-p, --page <n>` / `-l, --limit <n>` | Pagination, max 50              |
+
+### `dnc add`
+
+```text
+ringee dnc add <phoneNumbers...>
+```
+
+Adds one or more E.164 numbers to the workspace suppression list. Every future Ringee dial surface, including AI Voice Agents, checks this list before calling.
+
+| Option              | Description                     |
+| ------------------- | ------------------------------- |
+| `--reason <reason>` | Why the numbers were suppressed |
+
+### `dnc remove`
+
+```text
+ringee dnc remove <phoneNumber> --yes
+```
+
+<Warning>
+  **Destructive compliance change.** Releasing a number makes it callable again.
+  Verify the entry with `dnc list` and remove it only when the person has asked
+  to be callable.
+</Warning>
+
+## AI pipelines
+
+Pipeline reads follow the admin policy: freelancers can read their personal context; inside an organization, the caller must be an organization admin.
+
+### `pipelines list`
+
+```text
+ringee pipelines list
+```
+
+Lists the available pipelines, enabled contexts, pending actions and newly eligible calls.
+
+### `pipelines results`
+
+```text
+ringee pipelines results <pipeline> [context]
+```
+
+`<pipeline>` is one of `follow_up_recommendations`, `script_optimization` or `objection_intelligence`.
+
+Choose exactly one analysis context:
+
+| Option                    | Description                                                          |
+| ------------------------- | -------------------------------------------------------------------- |
+| `--campaign <campaignId>` | Calls attributed to one campaign                                     |
+| `--org`                   | Organization calls outside campaigns; the default in an organization |
+| `--personal`              | Personal calls in a freelancer workspace                             |
+| `--status <status>`       | `pending` (default), `completed`, `dismissed` or `snoozed` actions   |
+
+```bash
+ringee pipelines results objection_intelligence --org
+ringee pipelines results follow_up_recommendations --campaign <campaignId> --status pending
+```
+
+## AI Voice Agents
+
+These commands require an active organization workspace. A voice-agent call runs server-side; the CLI can exit while the conversation continues.
+
+### `voice-agents list`
+
+```text
+ringee voice-agents list
+```
+
+Lists agents, their type and status, required variables, default caller number and usable Ringee caller-number ids.
+
+### `voice-agents call`
+
+```text
+ringee voice-agents call <agentId> --to <phone> --var <name=value> --yes
+```
+
+<Warning>
+  This starts a real outbound phone call and spends Ringee credits. `--yes` is
+  required.
+</Warning>
+
+| Option               | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `--to <phone>`       | **Required.** Destination in E.164                                                               |
+| `--from <numberId>`  | Ringee phone-number id to call from; otherwise use the agent default or the sole eligible number |
+| `--var <name=value>` | Dynamic conversation variable; repeatable and values may contain `=`                             |
+| `--external-id <id>` | Your id, returned later under `metadata.external_id`                                             |
+| `-y, --yes`          | **Required.** Confirm the real, billed call                                                      |
+
+```bash
+ringee voice-agents call <agentId> \
+  --to +14155552671 \
+  --var first_name=Ada \
+  --var appointment_date=2026-09-10 \
+  --var appointment_time=14:00 \
+  --yes
+```
+
+### `voice-agents call-result`
+
+```text
+ringee voice-agents call-result <callId>
+```
+
+Read the current status and, once analysis is ready, the outcome, summary, sentiment, extracted data and metadata. Poll deliberately; retrying `voice-agents call` starts another call.
+
+See [AI Voice Agents from the CLI](/voice-agents/cli) for the end-to-end workflow and type-specific variables.
 
 ## Config and knowledge
 
-| Command | Description |
-|---|---|
-| `ringee config show` | Resolved connection, token masked |
-| `ringee config check` | Connect and list every tool the server exposes |
-| `ringee tools` | The agent capability catalog with sensitivity tags |
-| `ringee flow` | The outbound sales flow, step by step |
-| `ringee prompt` | The shared agent system prompt |
+| Command               | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| `ringee config show`  | Resolved connection, token masked                  |
+| `ringee config check` | Connect and list every tool the server exposes     |
+| `ringee tools`        | The agent capability catalog with sensitivity tags |
+| `ringee flow`         | The outbound sales flow, step by step              |
+| `ringee prompt`       | The shared agent system prompt                     |
 
 `tools`, `flow` and `prompt` need no connection — they print the shared knowledge from `@ringee-io/agent`, which is handy when briefing your own agent.
 
 ## Global options
 
-| Option | Description |
-|---|---|
-| `--json` | Raw JSON instead of formatted text |
-| `-v, --version` | Print the version |
-| `--help` | Help for any command or subcommand |
+| Option          | Description                        |
+| --------------- | ---------------------------------- |
+| `--json`        | Raw JSON instead of formatted text |
+| `-v, --version` | Print the version                  |
+| `--help`        | Help for any command or subcommand |
 
 ## Next steps
 

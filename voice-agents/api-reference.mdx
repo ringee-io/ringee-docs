@@ -1,0 +1,188 @@
+---
+title: AI Voice Agents API
+sidebarTitle: API reference
+description: "Public API endpoints for listing AI Voice Agents, starting calls and reading results"
+---
+
+Use the AI Voice Agents Public API to start autonomous calls from your server and read their structured results. Agent creation, configuration, knowledge sources and browser testing remain in the Ringee dashboard.
+
+## Authentication and base URL
+
+Authenticate every request with the `cik_live_…` API key from an active [Custom Integration](/api/authentication):
+
+```bash
+curl "https://api.ringee.io/api/v1/ai-voice-agents" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…"
+```
+
+You can instead send the same key as a Bearer credential:
+
+```http
+Authorization: Bearer cik_live_xxxxxxxx…
+```
+
+Send the key in exactly one of those headers. A request containing both is rejected.
+
+<Warning>
+  A Custom Integration API key is a server-side secret. Never expose it in
+  browser code, logs or a client application.
+</Warning>
+
+For self-hosting, replace `https://api.ringee.io` with `PUBLIC_BACKEND_URL`. The integration determines the user and organization; the API never accepts a client-supplied workspace id as authorization.
+
+AI Voice Agents require an organization-scoped Custom Integration. A personal-workspace key is valid for other Public API capabilities but returns `403` on these routes.
+
+## Endpoints
+
+| Method | Path                                     | Purpose                                  |
+| ------ | ---------------------------------------- | ---------------------------------------- |
+| `GET`  | `/api/v1/ai-voice-agents`                | List agents and their accepted variables |
+| `GET`  | `/api/v1/ai-voice-agents/phone-numbers`  | List eligible caller numbers             |
+| `POST` | `/api/v1/ai-voice-agents/:agentId/calls` | Start one real, billed call              |
+| `GET`  | `/api/v1/ai-voice-agents/:agentId/calls` | List calls for one agent                 |
+| `GET`  | `/api/v1/ai-voice-agents/calls/:callId`  | Read one normalized call result          |
+
+## List agents
+
+```bash
+curl "https://api.ringee.io/api/v1/ai-voice-agents?page=1&limit=20&type=appointment_booking" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…"
+```
+
+`page` defaults to `1`; `limit` defaults to `20` and cannot exceed `100`. `type` can be `appointment_booking` or `reminders_notifications`.
+
+```json
+{
+  "data": [
+    {
+      "id": "7c819553-25be-43b5-9fc6-58effe1569f8",
+      "name": "Maya",
+      "type": "appointment_booking",
+      "status": "active",
+      "voice": "Carolina",
+      "callCount": 14,
+      "callerNumberId": "1c93cab1-e97a-42e0-9ddf-e7a87cc950fd",
+      "callsFrom": "+13055550100",
+      "createdAt": "2026-09-04T14:00:00.000Z",
+      "updatedAt": "2026-09-04T14:30:00.000Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "callerNumbers": [
+    {
+      "id": "1c93cab1-e97a-42e0-9ddf-e7a87cc950fd",
+      "phoneNumber": "+13055550100",
+      "isoCountry": "US",
+      "kind": "purchased"
+    }
+  ],
+  "variablesByType": {
+    "appointment_booking": [
+      {
+        "key": "first_name",
+        "label": "First name",
+        "required": true,
+        "description": "The first name of the person being called."
+      }
+    ]
+  }
+}
+```
+
+The response excludes provider identifiers, credential references and callback secrets. Resolve `agentId`, `from_number_id` and required variables from this response before starting a call.
+
+## List caller numbers
+
+`GET /api/v1/ai-voice-agents/phone-numbers` returns the same `callerNumbers` entries as the list response, without the surrounding pagination object.
+
+## Start a call
+
+```bash
+curl -X POST "https://api.ringee.io/api/v1/ai-voice-agents/<agentId>/calls" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+13055550123",
+    "from_number_id": "1c93cab1-e97a-42e0-9ddf-e7a87cc950fd",
+    "variables": {
+      "first_name": "Carlos",
+      "reason": "Product demo"
+    },
+    "metadata": {
+      "external_id": "crm-contact-42"
+    }
+  }'
+```
+
+| Field            | Required | Description                                                                        |
+| ---------------- | -------- | ---------------------------------------------------------------------------------- |
+| `to`             | Yes      | Destination number. Ringee validates and normalizes it before dialing.             |
+| `from_number_id` | No       | Eligible caller number. Required if the agent has no assigned or default number.   |
+| `variables`      | No       | String values defined by the agent type. Every required variable must be supplied. |
+| `metadata`       | No       | Arbitrary correlation data echoed in the result.                                   |
+
+The response returns immediately:
+
+```json
+{
+  "id": "8ddf384a-9b9d-44dd-a120-23395b1f4c98",
+  "status": "initiating"
+}
+```
+
+Starting a call is non-idempotent. Each successful request creates a new call and can incur real usage. Do not automatically retry an ambiguous response.
+
+## List and read calls
+
+List one agent's calls with `GET /api/v1/ai-voice-agents/:agentId/calls?page=1&limit=20`, or read a known result directly:
+
+```bash
+curl "https://api.ringee.io/api/v1/ai-voice-agents/calls/<callId>" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…"
+```
+
+Both routes return the normalized public result shape:
+
+```json
+{
+  "call_id": "8ddf384a-9b9d-44dd-a120-23395b1f4c98",
+  "status": "completed",
+  "outcome": "appointment_booked",
+  "summary": "Carlos agreed to a product demo on Friday at 10:30 AM.",
+  "sentiment": "positive",
+  "extracted_data": {
+    "budget_range": "$5k-$10k"
+  },
+  "metadata": {
+    "external_id": "crm-contact-42"
+  }
+}
+```
+
+The list route wraps results in `{ data, total, page, limit }`. Post-call analysis can arrive shortly after the phone status becomes terminal, so poll again if `summary`, `sentiment` or `extracted_data` is still empty.
+
+## Common errors
+
+| Status | Meaning                                                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------- |
+| `400`  | Invalid pagination, number or variables; no usable caller number; the agent is not ready; or provider failure |
+| `401`  | Missing, malformed, unknown or disabled Custom Integration API key, or both supported auth headers were sent  |
+| `403`  | The integration is personal-scoped, calling is disabled, the number is on DNC or credits are unavailable      |
+| `404`  | The agent, call or caller number does not belong to the integration's organization                            |
+
+## Configuration stays in the dashboard
+
+The Public API intentionally exposes execution, not agent administration. Create, edit, enable, disable, test and delete agents in the Ringee dashboard, then use their ids from `GET /api/v1/ai-voice-agents` in your server integration.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Create and protect a Custom Integration API key
+  </Card>
+  <Card title="Calls and results" icon="phone" href="/voice-agents/calls">
+    Understand status, outcomes, polling and billing
+  </Card>
+</CardGroup>

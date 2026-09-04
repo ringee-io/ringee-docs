@@ -1,22 +1,22 @@
 ---
 title: Event reference
-description: 'Every event Ringee sends to your CRM'
+description: "Every event Ringee sends to your CRM"
 ---
 
 All outbound events share the envelope described in [Outbound webhooks](/api/outbound-webhooks#delivery-format) and add `workspaceId` and `integrationId`.
 
-| Event | Fires when | Subscription |
-|---|---|---|
-| [`call.completed`](#call-completed) | A call technically ended | <span className="rg-badge rg-neutral">Opt in</span> |
+| Event                                           | Fires when                           | Subscription                                        |
+| ----------------------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| [`call.completed`](#call-completed)             | A call technically ended             | <span className="rg-badge rg-neutral">Opt in</span> |
 | [`call.outcome.updated`](#call-outcome-updated) | A user set or changed a call outcome | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`call.missed`](#call-missed) | An inbound call was not answered | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`call.failed`](#call-failed) | A call failed technically | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`note.created`](#note-created) | A note was added to a contact | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`callback.created`](#callback-created) | A callback was scheduled | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`meeting.created`](#meeting-created) | A meeting was scheduled | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`recording.ready`](#recording-ready) | A recording finished processing | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`dnc.created`](#dnc-created) | A number was added to Do Not Call | <span className="rg-badge rg-neutral">Opt in</span> |
-| [`test.ping`](#test-ping) | You click **Test webhook** | <span className="rg-badge rg-out">Always</span> |
+| [`call.missed`](#call-missed)                   | An inbound call was not answered     | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`call.failed`](#call-failed)                   | A call failed technically            | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`note.created`](#note-created)                 | A note was added to a contact        | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`callback.created`](#callback-created)         | A callback was scheduled             | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`meeting.created`](#meeting-created)           | A meeting was scheduled              | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`recording.ready`](#recording-ready)           | A recording finished processing      | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`dnc.created`](#dnc-created)                   | A number was added to Do Not Call    | <span className="rg-badge rg-neutral">Opt in</span> |
+| [`test.ping`](#test-ping)                       | You click **Test webhook**           | <span className="rg-badge rg-out">Test only</span>  |
 
 Select which events you receive in **Integrations → Custom Integrations → Configure → Settings**.
 
@@ -24,11 +24,11 @@ Select which events you receive in **Integrations → Custom Integrations → Co
 
 Several events embed the same nested objects.
 
-| Object | Shape |
-|---|---|
+| Object         | Shape                                                 |
+| -------------- | ----------------------------------------------------- |
 | `data.contact` | `{ id, externalId?, phoneNumber, fullName?, email? }` |
-| `data.company` | `{ id, externalId?, name }` |
-| `data.user` | `{ id, email?, fullName? }` |
+| `data.company` | `{ id, externalId?, name }`                           |
+| `data.user`    | `{ id, email?, fullName? }`                           |
 
 `externalId` is present when the record was linked through [`contact.upserted`](/api/inbound-events#contact-upserted) or [`company.upserted`](/api/inbound-events#company-upserted). Use it as your primary join key and fall back to `phoneNumber`.
 
@@ -40,19 +40,45 @@ A call has technically ended, regardless of whether anyone recorded an outcome y
 
 **Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.status`, `data.direction`, `data.endedAt`
 
-<ResponseField name="data.callId" type="string" required>Ringee call UUID. Use it as the unique key for the activity in your CRM.</ResponseField>
-<ResponseField name="data.fromNumber" type="string" required>Originating E.164 number.</ResponseField>
-<ResponseField name="data.toNumber" type="string" required>Destination E.164 number.</ResponseField>
-<ResponseField name="data.status" type="string" required>Final call status reported by the carrier.</ResponseField>
-<ResponseField name="data.direction" type="string" required>`inbound` or `outbound`.</ResponseField>
-<ResponseField name="data.endedAt" type="string (ISO-8601)" required>When the call ended.</ResponseField>
-<ResponseField name="data.startedAt" type="string (ISO-8601)">When the call was initiated.</ResponseField>
-<ResponseField name="data.answeredAt" type="string (ISO-8601)">When the call was answered.</ResponseField>
-<ResponseField name="data.durationSeconds" type="number">Total billed duration.</ResponseField>
-<ResponseField name="data.recordingStatus" type="string">`pending`, `ready` or `unavailable`.</ResponseField>
-<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
-<ResponseField name="data.company" type="object">Company reference.</ResponseField>
-<ResponseField name="data.user" type="object">Ringee user who handled the call.</ResponseField>
+<ResponseField name="data.callId" type="string" required>
+  Ringee call UUID. Use it as the unique key for the activity in your CRM.
+</ResponseField>
+<ResponseField name="data.fromNumber" type="string" required>
+  Originating E.164 number.
+</ResponseField>
+<ResponseField name="data.toNumber" type="string" required>
+  Destination E.164 number.
+</ResponseField>
+<ResponseField name="data.status" type="string" required>
+  Final call status reported by the carrier.
+</ResponseField>
+<ResponseField name="data.direction" type="string" required>
+  `inbound` or `outbound`; legacy call records may use `incoming` or `outgoing`.
+</ResponseField>
+<ResponseField name="data.endedAt" type="string (ISO-8601)" required>
+  When the call ended.
+</ResponseField>
+<ResponseField name="data.startedAt" type="string (ISO-8601)">
+  When the call was initiated.
+</ResponseField>
+<ResponseField name="data.answeredAt" type="string (ISO-8601)">
+  When the call was answered.
+</ResponseField>
+<ResponseField name="data.durationSeconds" type="number">
+  Total billed duration.
+</ResponseField>
+<ResponseField name="data.recordingStatus" type="string">
+  `pending`, `ready` or `unavailable`.
+</ResponseField>
+<ResponseField name="data.contact" type="object">
+  Contact reference.
+</ResponseField>
+<ResponseField name="data.company" type="object">
+  Company reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  Ringee user who handled the call.
+</ResponseField>
 
 ```json
 {
@@ -80,7 +106,8 @@ A call has technically ended, regardless of whether anyone recorded an outcome y
 ```
 
 <Warning>
-This event does **not** include the outcome. Outcomes arrive separately via `call.outcome.updated`, and may never arrive if the user never records one.
+  This event does **not** include the outcome. Outcomes arrive separately via
+  `call.outcome.updated`, and may never arrive if the user never records one.
 </Warning>
 
 ---
@@ -91,13 +118,28 @@ A user recorded or changed the outcome of a call. This can happen well after `ca
 
 **Required:** `data.callId`, `data.outcome`, `data.updatedAt`
 
-<ResponseField name="data.callId" type="string" required>Ringee call UUID — match it against an existing activity.</ResponseField>
-<ResponseField name="data.outcome" type="string" required>The `CallOutcome` value, for example `sale`, `interested`, `meeting_booked`, `voicemail`, `no_answer`.</ResponseField>
-<ResponseField name="data.updatedAt" type="string (ISO-8601)" required>When the outcome was set.</ResponseField>
-<ResponseField name="data.outcomeNote" type="string">Free-text note attached to the outcome.</ResponseField>
-<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
-<ResponseField name="data.company" type="object">Company reference.</ResponseField>
-<ResponseField name="data.user" type="object">User who recorded the outcome.</ResponseField>
+<ResponseField name="data.callId" type="string" required>
+  Ringee call UUID — match it against an existing activity.
+</ResponseField>
+<ResponseField name="data.outcome" type="string" required>
+  The `CallOutcome` value, for example `sale`, `interested`, `meeting_booked`,
+  `voicemail`, `no_answer`.
+</ResponseField>
+<ResponseField name="data.updatedAt" type="string (ISO-8601)" required>
+  When the outcome was set.
+</ResponseField>
+<ResponseField name="data.outcomeNote" type="string">
+  Free-text note attached to the outcome.
+</ResponseField>
+<ResponseField name="data.contact" type="object">
+  Contact reference.
+</ResponseField>
+<ResponseField name="data.company" type="object">
+  Company reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User who recorded the outcome.
+</ResponseField>
 
 ```json
 {
@@ -116,7 +158,8 @@ A user recorded or changed the outcome of a call. This can happen well after `ca
 ```
 
 <Note>
-Update the existing activity — never create a second one. When the outcome is `meeting_booked`, a separate `meeting.created` event also fires.
+  Update the existing activity — never create a second one. When the outcome is
+  `meeting_booked`, a separate `meeting.created` event also fires.
 </Note>
 
 ---
@@ -127,10 +170,30 @@ An inbound call arrived but nobody picked up.
 
 **Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.occurredAt`
 
-<ResponseField name="data.reason" type="string">Carrier-provided reason.</ResponseField>
-<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
-<ResponseField name="data.company" type="object">Company reference.</ResponseField>
-<ResponseField name="data.user" type="object">User reference.</ResponseField>
+<ResponseField name="data.callId" type="string" required>
+  Ringee call UUID.
+</ResponseField>
+<ResponseField name="data.fromNumber" type="string" required>
+  Originating number; normally the contact for a missed inbound call.
+</ResponseField>
+<ResponseField name="data.toNumber" type="string" required>
+  Workspace number that received the call.
+</ResponseField>
+<ResponseField name="data.occurredAt" type="string (ISO-8601)" required>
+  When the missed call was recorded.
+</ResponseField>
+<ResponseField name="data.reason" type="string">
+  Carrier-provided reason.
+</ResponseField>
+<ResponseField name="data.contact" type="object">
+  Contact reference.
+</ResponseField>
+<ResponseField name="data.company" type="object">
+  Company reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User reference.
+</ResponseField>
 
 ```json
 {
@@ -158,11 +221,33 @@ The telephony stack reported a hard failure — busy, invalid number, network er
 
 **Required:** `data.callId`, `data.fromNumber`, `data.toNumber`, `data.occurredAt`
 
-<ResponseField name="data.errorCode" type="string">Carrier error code, for example `USER_BUSY`.</ResponseField>
-<ResponseField name="data.errorMessage" type="string">Human-readable description.</ResponseField>
-<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
-<ResponseField name="data.company" type="object">Company reference.</ResponseField>
-<ResponseField name="data.user" type="object">User reference.</ResponseField>
+<ResponseField name="data.callId" type="string" required>
+  Ringee call UUID.
+</ResponseField>
+<ResponseField name="data.fromNumber" type="string" required>
+  Originating number.
+</ResponseField>
+<ResponseField name="data.toNumber" type="string" required>
+  Destination number.
+</ResponseField>
+<ResponseField name="data.occurredAt" type="string (ISO-8601)" required>
+  When the failure was recorded.
+</ResponseField>
+<ResponseField name="data.errorCode" type="string">
+  Carrier error code, for example `USER_BUSY`.
+</ResponseField>
+<ResponseField name="data.errorMessage" type="string">
+  Human-readable description.
+</ResponseField>
+<ResponseField name="data.contact" type="object">
+  Contact reference.
+</ResponseField>
+<ResponseField name="data.company" type="object">
+  Company reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User reference.
+</ResponseField>
 
 ```json
 {
@@ -187,7 +272,21 @@ The telephony stack reported a hard failure — busy, invalid number, network er
 
 **Required:** `data.noteId`, `data.contact`, `data.content`, `data.createdAt`
 
-<ResponseField name="data.createdBy" type="object">User who wrote the note.</ResponseField>
+<ResponseField name="data.noteId" type="string" required>
+  Ringee note UUID.
+</ResponseField>
+<ResponseField name="data.contact" type="object" required>
+  Contact the note belongs to.
+</ResponseField>
+<ResponseField name="data.content" type="string" required>
+  Note text.
+</ResponseField>
+<ResponseField name="data.createdAt" type="string (ISO-8601)" required>
+  When the note was created.
+</ResponseField>
+<ResponseField name="data.createdBy" type="object">
+  User who wrote the note.
+</ResponseField>
 
 ```json
 {
@@ -215,9 +314,30 @@ The telephony stack reported a hard failure — busy, invalid number, network er
 
 **Required:** `data.callbackId`, `data.contact`, `data.scheduledAt`, `data.status`, `data.createdAt`
 
-<ResponseField name="data.call" type="object">Originating call reference.</ResponseField>
-<ResponseField name="data.note" type="string">Free-text note.</ResponseField>
-<ResponseField name="data.user" type="object">User who scheduled it.</ResponseField>
+<ResponseField name="data.callbackId" type="string" required>
+  Ringee callback UUID.
+</ResponseField>
+<ResponseField name="data.contact" type="object" required>
+  Contact to call back.
+</ResponseField>
+<ResponseField name="data.scheduledAt" type="string (ISO-8601)" required>
+  Scheduled callback time.
+</ResponseField>
+<ResponseField name="data.status" type="string" required>
+  Current callback status.
+</ResponseField>
+<ResponseField name="data.createdAt" type="string (ISO-8601)" required>
+  When the callback was created.
+</ResponseField>
+<ResponseField name="data.call" type="object">
+  Originating call reference.
+</ResponseField>
+<ResponseField name="data.note" type="string">
+  Free-text note.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User who scheduled it.
+</ResponseField>
 
 ```json
 {
@@ -248,13 +368,42 @@ Fires when a user schedules a meeting. Independent of outcomes — if the outcom
 
 **Required:** `data.meetingId`, `data.contact`, `data.scheduledAt`, `data.status`, `data.createdAt`
 
-<ResponseField name="data.title" type="string">Meeting title.</ResponseField>
-<ResponseField name="data.duration" type="number">Duration in minutes.</ResponseField>
-<ResponseField name="data.location" type="string">Physical location or video link.</ResponseField>
-<ResponseField name="data.notes" type="string">Notes.</ResponseField>
-<ResponseField name="data.externalEventId" type="string">Calendar provider event id, when synced to Google or Microsoft.</ResponseField>
-<ResponseField name="data.call" type="object">Originating call reference.</ResponseField>
-<ResponseField name="data.user" type="object">User reference.</ResponseField>
+<ResponseField name="data.meetingId" type="string" required>
+  Ringee meeting UUID.
+</ResponseField>
+<ResponseField name="data.contact" type="object" required>
+  Contact invited to the meeting.
+</ResponseField>
+<ResponseField name="data.scheduledAt" type="string (ISO-8601)" required>
+  Scheduled meeting time.
+</ResponseField>
+<ResponseField name="data.status" type="string" required>
+  Current meeting status.
+</ResponseField>
+<ResponseField name="data.createdAt" type="string (ISO-8601)" required>
+  When the meeting was created.
+</ResponseField>
+<ResponseField name="data.title" type="string">
+  Meeting title.
+</ResponseField>
+<ResponseField name="data.duration" type="number">
+  Duration in minutes.
+</ResponseField>
+<ResponseField name="data.location" type="string">
+  Physical location or video link.
+</ResponseField>
+<ResponseField name="data.notes" type="string">
+  Notes.
+</ResponseField>
+<ResponseField name="data.externalEventId" type="string">
+  Calendar provider event id, when synced to Google or Microsoft.
+</ResponseField>
+<ResponseField name="data.call" type="object">
+  Originating call reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User reference.
+</ResponseField>
 
 ```json
 {
@@ -287,10 +436,27 @@ The recording has been processed and is downloadable.
 
 **Required:** `data.recordingId`, `data.callId`, `data.url`, `data.createdAt`
 
-<ResponseField name="data.url" type="string" required>Signed URL to the recording.</ResponseField>
-<ResponseField name="data.format" type="string">Audio container, for example `mp3` or `wav`.</ResponseField>
-<ResponseField name="data.durationSec" type="number">Duration in seconds.</ResponseField>
-<ResponseField name="data.transcript" type="string">Plain-text transcript, when available.</ResponseField>
+<ResponseField name="data.recordingId" type="string" required>
+  Ringee recording UUID.
+</ResponseField>
+<ResponseField name="data.callId" type="string" required>
+  Call UUID used to attach the recording to an activity.
+</ResponseField>
+<ResponseField name="data.url" type="string" required>
+  Signed URL to the recording.
+</ResponseField>
+<ResponseField name="data.createdAt" type="string (ISO-8601)" required>
+  When the recording became available.
+</ResponseField>
+<ResponseField name="data.format" type="string">
+  Audio container, for example `mp3` or `wav`.
+</ResponseField>
+<ResponseField name="data.durationSec" type="number">
+  Duration in seconds.
+</ResponseField>
+<ResponseField name="data.transcript" type="string">
+  Plain-text transcript, when available.
+</ResponseField>
 
 ```json
 {
@@ -311,7 +477,9 @@ The recording has been processed and is downloadable.
 ```
 
 <Warning>
-Attach the recording to the activity matched by `callId`, and protect the URL behind your CRM's existing access policies. Never expose recordings across organizations.
+  Attach the recording to the activity matched by `callId`, and protect the URL
+  behind your CRM's existing access policies. Never expose recordings across
+  organizations.
 </Warning>
 
 ---
@@ -322,10 +490,24 @@ A phone number or contact was added to the Do Not Call list.
 
 **Required:** `data.phoneNumber`, `data.createdAt`
 
-<ResponseField name="data.reason" type="string">Free-text reason.</ResponseField>
-<ResponseField name="data.source" type="string">Channel that triggered the addition.</ResponseField>
-<ResponseField name="data.contact" type="object">Contact reference.</ResponseField>
-<ResponseField name="data.user" type="object">User reference.</ResponseField>
+<ResponseField name="data.phoneNumber" type="string" required>
+  Number added to the Do Not Call list.
+</ResponseField>
+<ResponseField name="data.createdAt" type="string (ISO-8601)" required>
+  When the DNC entry was created.
+</ResponseField>
+<ResponseField name="data.reason" type="string">
+  Free-text reason.
+</ResponseField>
+<ResponseField name="data.source" type="string">
+  Channel that triggered the addition.
+</ResponseField>
+<ResponseField name="data.contact" type="object">
+  Contact reference.
+</ResponseField>
+<ResponseField name="data.user" type="object">
+  User reference.
+</ResponseField>
 
 ```json
 {
@@ -360,7 +542,7 @@ Sent when you click **Test webhook**. Use it to validate signature verification 
 }
 ```
 
-Respond `200` with:
+Return any `2xx` response. Ringee ignores the response body; for example:
 
 ```json
 { "received": true, "event": "test.ping" }
@@ -375,3 +557,8 @@ GET /api/integrations/custom/event-specs
 ```
 
 It returns each event's `requiredFields`, `optionalFields`, `examplePayload` and `notes` — useful for generating types or validating your handler in CI.
+
+<Warning>
+  This is a management endpoint. It requires a signed-in Ringee admin session,
+  not `X-Ringee-Api-Key`.
+</Warning>

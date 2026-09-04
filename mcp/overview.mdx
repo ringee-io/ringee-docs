@@ -1,10 +1,10 @@
 ---
 title: MCP overview
 sidebarTitle: Overview
-description: 'Let AI assistants operate Ringee through the Model Context Protocol'
+description: "Let AI assistants operate Ringee through the Model Context Protocol"
 ---
 
-Ringee ships a built-in **MCP server**. Connect it to Claude, ChatGPT, Cursor or any MCP client and the assistant can search your contacts, review calls, prospect leads, create dialing sessions and schedule follow-ups — using your real Ringee data.
+Ringee ships a built-in **MCP server**. Connect it to Claude, ChatGPT, Cursor or any MCP client and the assistant can search contacts, manage campaigns, review analytics, prospect leads, create dialing sessions, enforce DNC and run AI Voice Agents—using your real Ringee data.
 
 <CardGroup cols={2}>
   <Card title="Connect a client" icon="plug" href="/mcp/connect">
@@ -17,14 +17,19 @@ Ringee ships a built-in **MCP server**. Connect it to Claude, ChatGPT, Cursor or
 
 ## What the assistant can do
 
-| Area | Tools |
-|---|---|
-| Workspaces | List available workspaces, switch between personal and organization |
-| Contacts | Search, fetch details, create, update, soft-delete, find by call outcome |
-| Calls | List full call history including outcome, transcription and recording URL |
-| Follow-ups | Log call outcomes, schedule callbacks, book meetings |
-| Call sessions | Create, inspect, update and revoke magic-link dialing queues |
-| Prospecting | Search leads, reveal contact info, bulk-import as contacts (Apollo or Prospeo) |
+| Area            | Tools                                                                              |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Workspaces      | List available workspaces, switch between personal and organization                |
+| Contacts        | Search, fetch details, create, update, soft-delete, find by call outcome           |
+| Calls           | List full call history including outcome, transcription and recording URL          |
+| Follow-ups      | Log call outcomes, schedule callbacks, book meetings                               |
+| Call sessions   | Create, inspect, update and revoke magic-link dialing queues                       |
+| Prospecting     | Search leads, reveal contact info, bulk-import as contacts (Apollo or Prospeo)     |
+| Campaigns       | List configuration and leads, change status, add or remove leads, read performance |
+| Analytics       | Dashboard KPIs, outcome funnels, daily activity and per-agent performance          |
+| Compliance      | List, add and explicitly remove Do Not Call entries                                |
+| AI pipelines    | Read follow-up, script and objection-analysis results                              |
+| AI Voice Agents | List configured agents, start a real conversation and read its structured result   |
 
 ## Architecture
 
@@ -50,13 +55,15 @@ Every tool call resolves to the same domain services the dashboard uses, so perm
 
 ## Two endpoints, two auth models
 
-| Endpoint | Auth | Use for |
-|---|---|---|
-| `/api/mcp/:userId/sse` | The ids embedded in the URL | Personal use — Claude Desktop, Cursor, the [`ringee` CLI](/cli/overview) |
-| `/api/mcp/chatgpt/sse` | OAuth 2.1 bearer token (Clerk) | Multi-user apps — the ChatGPT connector |
+| Endpoint               | Auth                           | Use for                                                                  |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------ |
+| `/api/mcp/:userId/sse` | The ids embedded in the URL    | Personal use — Claude Desktop, Cursor, the [`ringee` CLI](/cli/overview) |
+| `/api/mcp/chatgpt/sse` | OAuth 2.1 bearer token (Clerk) | Multi-user apps — the ChatGPT connector                                  |
 
 <Warning>
-The URL-scoped endpoint grants access to the workspace it names. Treat your MCP URL like a password: do not paste it in shared documents, tickets or screenshots.
+  The URL-scoped endpoint grants access to the workspace it names. Treat your
+  MCP URL like a password: do not paste it in shared documents, tickets or
+  screenshots.
 </Warning>
 
 ## Workspace scoping
@@ -67,9 +74,9 @@ Everything an assistant reads or writes is scoped to the **active workspace** �
 
 Tools are annotated with the MCP trust hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so clients can warn before something consequential happens.
 
-- **Destructive** tools — `delete_contact`, `delete_call_session` — require explicit confirmation, and `delete_contact` additionally requires the contact's stored phone number.
-- **Sensitive** tools — `reveal_lead`, `create_call_session` — spend provider credits or mint shareable links.
-- MCP lead tools **never spend Ringee credits**, though `search_leads` and `reveal_lead` do consume your connected enrichment provider's allowance.
+- **Destructive** tools include contact deletion, session revocation, campaign-lead removal and DNC removal. Their confirmation rules depend on the target.
+- **Sensitive** tools include lead reveal, call-session creation and `start_ai_voice_agent_call`.
+- `start_ai_voice_agent_call` starts a real, billed call. `reveal_lead` uses the connected enrichment provider's allowance instead of Ringee calling credits; lead search itself is free.
 
 See [Safety and confirmations](/mcp/safety).
 

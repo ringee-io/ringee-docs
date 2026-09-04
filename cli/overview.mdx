@@ -1,10 +1,10 @@
 ---
 title: CLI overview
 sidebarTitle: Overview
-description: 'Operate Ringee from the terminal'
+description: "Operate Ringee from the terminal"
 ---
 
-The `ringee` CLI puts contacts, leads, call history, dialing sessions and follow-ups behind a handful of commands. It is a thin front end over the Ringee [MCP server](/mcp/overview) — the same tools an AI assistant would call, with the same guardrails.
+The `ringee` CLI puts contacts, leads, campaigns, analytics, DNC, AI pipelines, AI Voice Agents, dialing sessions and follow-ups behind a consistent command line. It is a thin front end over the Ringee [MCP server](/mcp/overview)—the same tools an AI assistant would call, with the same guardrails.
 
 ```bash
 npm i -g ringee
@@ -47,24 +47,29 @@ Requires **Node 20 or newer**. The published binary pulls in three dependencies 
 
 ## What it is good for
 
-| Use case | Why the CLI |
-|---|---|
-| Quick lookups | `ringee contacts search acme` beats opening the dashboard |
-| Scripting | `--json` on any command gives machine-readable output |
-| AI agents | Any harness that can run shell commands can drive Ringee |
-| Debugging MCP | `ringee config check` lists every tool the server exposes |
-| CI and automation | No browser, no session cookie — just an env var |
+| Use case          | Why the CLI                                               |
+| ----------------- | --------------------------------------------------------- |
+| Quick lookups     | `ringee contacts search acme` beats opening the dashboard |
+| Scripting         | `--json` on any command gives machine-readable output     |
+| AI agents         | Any harness that can run shell commands can drive Ringee  |
+| Debugging MCP     | `ringee config check` lists every tool the server exposes |
+| CI and automation | No browser, no session cookie — just an env var           |
 
 ## Command groups
 
-| Group | Purpose |
-|---|---|
-| `contacts` | Search, view, create, update, delete; find by call outcome |
-| `leads` | Prospect via Apollo or Prospeo; reveal and import |
-| `sessions` | Magic-link dialing queues |
-| `calls` | Browse call history with outcomes, transcriptions and recordings |
-| `outcomes`, `callbacks`, `meetings` | Log results and book the next touch |
-| `config` | Connection diagnostics and the shared agent knowledge |
+| Group                               | Purpose                                                           |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| `contacts`                          | Search, view, create, update, delete; find by call outcome        |
+| `leads`                             | Prospect via Apollo or Prospeo; reveal and import                 |
+| `sessions`                          | Magic-link dialing queues                                         |
+| `calls`                             | Browse call history with outcomes, transcriptions and recordings  |
+| `outcomes`, `callbacks`, `meetings` | Log results and book the next touch                               |
+| `campaigns`                         | Inspect campaign configuration, manage leads and read performance |
+| `analytics`                         | Dashboard metrics and one-day activity                            |
+| `dnc`                               | Manage the workspace Do Not Call suppression list                 |
+| `pipelines`                         | Read AI pipeline state and results                                |
+| `voice-agents`                      | List agents, start a real billed call and read its result         |
+| `config`                            | Connection diagnostics and the shared agent knowledge             |
 
 ## Safety
 
@@ -75,6 +80,9 @@ ringee leads reveal <jobId> <externalId> --yes
 ringee sessions create --contact <id> --yes
 ringee sessions revoke <sessionId> --yes
 ringee contacts delete <id> --confirm-phone +14155550123 --yes
+ringee campaigns delete-lead <campaignId> <leadId> --yes
+ringee dnc remove +14155550123 --yes
+ringee voice-agents call <agentId> --to +14155550123 --yes
 ```
 
 See [Safety and confirmations](/mcp/safety).
@@ -95,5 +103,8 @@ ringee contacts search acme --json | jq '.contacts[].phoneNumber'
   </Card>
   <Card title="Use it from an agent" icon="robot" href="/cli/agents">
     Drive Ringee from Claude Code or any shell-capable harness
+  </Card>
+  <Card title="AI Voice Agents" icon="phone" href="/voice-agents/cli">
+    Place and monitor autonomous calls from the CLI
   </Card>
 </CardGroup>

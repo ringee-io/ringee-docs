@@ -1,0 +1,161 @@
+---
+title: AI Voice Agents over MCP
+sidebarTitle: MCP
+description: "List agents, start a real call and read its result from any MCP client"
+---
+
+The Ringee MCP server exposes three focused AI Voice Agent tools. Agent creation and configuration remain in the dashboard; the [Public API](/voice-agents/api-reference), MCP and CLI expose the execution flow.
+
+## Requirements
+
+- Connect MCP to an organization workspace.
+- Create and activate the agent first.
+- Keep the destination and caller-number ids in the active workspace.
+- Ask for human confirmation immediately before starting a real call.
+
+## `list_ai_voice_agents`
+
+<span className="rg-badge rg-read">Read</span>
+
+Lists agents, the caller numbers this workspace may use and the accepted variables for each type.
+
+<ParamField body="limit" type="number">
+  Number of agents to return. Defaults to 20, max 100.
+</ParamField>
+
+Always resolve `agentId`, `fromNumberId` and required variable names from this tool before calling.
+
+```json
+{
+  "agents": [
+    {
+      "id": "<agentId>",
+      "name": "Maya",
+      "type": "appointment_booking",
+      "status": "active",
+      "voice": "Carolina",
+      "callCount": 14,
+      "callsFrom": "+13055550100"
+    }
+  ],
+  "callerNumbers": [
+    {
+      "id": "<numberId>",
+      "phoneNumber": "+13055550100",
+      "country": "US"
+    }
+  ],
+  "variablesByType": {
+    "appointment_booking": [
+      {
+        "key": "first_name",
+        "required": true,
+        "description": "The first name of the person being called."
+      }
+    ]
+  }
+}
+```
+
+## `start_ai_voice_agent_call`
+
+<span className="rg-badge rg-sensitive">Sensitive</span>
+<span className="rg-badge rg-neutral">Real billed call</span>
+
+<ParamField body="agentId" type="string (uuid)" required>
+  Agent returned by `list_ai_voice_agents`.
+</ParamField>
+<ParamField body="to" type="string" required>
+  Destination in E.164.
+</ParamField>
+<ParamField body="fromNumberId" type="string (uuid)">
+  Eligible Ringee number. Required when no default can be resolved.
+</ParamField>
+<ParamField body="variables" type="object">
+  String values accepted by the selected agent type.
+</ParamField>
+<ParamField body="metadata" type="object">
+  Free-form values echoed in the result.
+</ParamField>
+
+```json
+{
+  "agentId": "<agentId>",
+  "to": "+13055550123",
+  "fromNumberId": "<numberId>",
+  "variables": {
+    "first_name": "Carlos",
+    "reason": "Product demo"
+  },
+  "metadata": {
+    "external_id": "crm-contact-42"
+  }
+}
+```
+
+The tool returns immediately:
+
+```json
+{
+  "ok": true,
+  "callId": "8ddf384a-9b9d-44dd-a120-23395b1f4c98",
+  "status": "initiating",
+  "note": "The conversation runs asynchronously. Poll get_ai_voice_agent_call for the outcome."
+}
+```
+
+<Warning>
+  This tool is non-idempotent. A repeated successful call starts another phone
+  call. MCP annotations identify it as write, non-idempotent and open-world, but
+  the assistant must still explain the target and wait for an explicit human
+  yes.
+</Warning>
+
+## `get_ai_voice_agent_call`
+
+<span className="rg-badge rg-read">Read</span>
+
+<ParamField body="callId" type="string (uuid)" required>
+  The id returned by `start_ai_voice_agent_call`.
+</ParamField>
+
+Returns `call_id`, `status`, `outcome`, `summary`, `sentiment`, `extracted_data` and `metadata`. Analysis fields can remain empty briefly after the status becomes terminal.
+
+## Recommended flow
+
+<Steps>
+<Step title="List and resolve">
+
+Call `list_ai_voice_agents`. Choose an active agent, confirm its required variables and resolve a caller number when needed.
+
+</Step>
+
+<Step title="Confirm the real call">
+
+State the agent name and destination. Explain that this places a real, billed call and wait for the user's explicit approval.
+
+</Step>
+
+<Step title="Start once">
+
+Call `start_ai_voice_agent_call` once. Preserve the returned `callId`.
+
+</Step>
+
+<Step title="Read the result">
+
+Poll `get_ai_voice_agent_call` until the phone status is terminal and the required analysis fields have arrived.
+
+</Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Complete MCP reference" icon="list" href="/mcp/tools">
+    All 37 Ringee MCP tools
+  </Card>
+  <Card title="MCP safety" icon="shield-check" href="/mcp/safety">
+    Confirmation, destructive actions and credits
+  </Card>
+</CardGroup>

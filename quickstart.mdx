@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: 'Get started with Ringee installation'
+description: "Get started with Ringee installation"
 ---
 
 ## Self-hosted installation options
@@ -8,7 +8,11 @@ description: 'Get started with Ringee installation'
 Choose the best option for your use case:
 
 <CardGroup cols={2}>
-  <Card title="Docker Compose" icon="docker" href="/installation/docker-compose">
+  <Card
+    title="Docker Compose"
+    icon="docker"
+    href="/installation/docker-compose"
+  >
     Recommended for **production** — everything in one command
   </Card>
   <Card title="Development" icon="code" href="/installation/development">
@@ -41,13 +45,19 @@ Then open:
 - **Backend API** → [http://localhost:3000/api](http://localhost:3000/api)
 
 <Warning>
-You **must** configure your API keys in the `.env` file before running. See the [Configuration Reference](/configuration/reference) for details on each variable.
+  You **must** configure your API keys in the `.env` file before running. See
+  the [Configuration Reference](/configuration/reference) for details on each
+  variable.
 </Warning>
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Configuration Reference" icon="gear" href="/configuration/reference">
+  <Card
+    title="Configuration Reference"
+    icon="gear"
+    href="/configuration/reference"
+  >
     Learn about all environment variables
   </Card>
   <Card title="Telnyx Setup" icon="phone" href="/providers/telnyx">
@@ -58,5 +68,8 @@ You **must** configure your API keys in the `.env` file before running. See the 
   </Card>
   <Card title="How it works" icon="diagram-project" href="/howitworks">
     The architecture behind Ringee
+  </Card>
+  <Card title="AI Voice Agents" icon="robot" href="/voice-agents/quickstart">
+    Create an agent that can place and analyze calls
   </Card>
 </CardGroup>

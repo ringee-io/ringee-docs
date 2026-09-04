@@ -1,0 +1,115 @@
+---
+title: Configure an agent
+description: "Choose an agent type, model, voice, caller number and conversation behavior"
+---
+
+An AI Voice Agent is a Ringee-owned configuration projected to the voice provider. Saving an agent rebuilds that provider configuration from the stored row, its type blueprint and the active workspace.
+
+## Agent types and variables
+
+Variables describe the person and the reason for one call. Required values must be present and unknown variable names are rejected.
+
+### Appointment Booking
+
+| Variable             | Required | Meaning                                                |
+| -------------------- | -------: | ------------------------------------------------------ |
+| `first_name`         |      Yes | First name of the person being called                  |
+| `last_name`          |       No | Last name                                              |
+| `email`              |       No | Address to confirm and use for the calendar invitation |
+| `reason`             |       No | Why you are calling, in one line                       |
+| `additional_context` |       No | Anything else the agent should know                    |
+
+Possible outcomes: `appointment_booked`, `callback_requested`, `not_interested`, `no_conversation`, `unknown`.
+
+This type must have a calendar integration before it can become active. The agent may offer only slots returned by the live availability tool and may report a meeting as booked only after the booking tool succeeds.
+
+### Reminders & Notifications
+
+| Variable             | Required | Meaning                                         |
+| -------------------- | -------: | ----------------------------------------------- |
+| `first_name`         |      Yes | First name of the person being called           |
+| `last_name`          |       No | Last name                                       |
+| `notification`       |      Yes | The reminder, confirmation or update to deliver |
+| `appointment_date`   |       No | Date being confirmed                            |
+| `appointment_time`   |       No | Time being confirmed                            |
+| `additional_context` |       No | Anything else the agent should mention          |
+
+Possible outcomes: `confirmed`, `cannot_attend`, `callback_requested`, `not_interested`, `no_conversation`, `unknown`.
+
+This type does not reschedule an appointment. When the person needs a change or asks for a human, it creates a human-support notification for the workspace.
+
+## Model choices
+
+| Choice      | Credential             | Billing location                                 |
+| ----------- | ---------------------- | ------------------------------------------------ |
+| `ringee`    | None                   | Included in the voice-agent usage Ringee settles |
+| `openai`    | Your OpenAI API key    | Your OpenAI account                              |
+| `anthropic` | Your Anthropic API key | Your Anthropic account                           |
+| `google`    | Your Google AI API key | Your Google account                              |
+
+The exact model behind each choice comes from the self-hosted deployment's `AI_VOICE_AGENT_*_MODEL` settings and is returned by `GET /api/ai-voice-agents/models`.
+
+<Warning>
+  An API key is write-only. Ringee never returns it and does not store the
+  plaintext key in its database. To replace it, submit a new key.
+</Warning>
+
+## Voices and language
+
+Ringee curates conversational voices in English (`en`), Spanish (`es`), Portuguese (`pt`), French (`fr`), German (`de`) and Italian (`it`). Up to 8 voices are returned per locale. The selected voice's language controls the type's default greeting and instructions.
+
+Use the preview endpoint or the dashboard player before the first real call. Voice previews are generated audio and can incur provider usage for the deployment, so Ringee caches them in the API process.
+
+## Company context
+
+Each agent can carry its own company name, website and description. When those values are empty, Ringee falls back to the workspace company profile. This lets one organization operate agents for multiple brands without changing the shared fallback.
+
+Ringee can generate a draft description from a public website. The URL fetch rejects private and local network targets.
+
+## Caller number
+
+You can assign a default Ringee number to the agent or choose one on each call. At call time Ringee resolves the caller number in this order:
+
+1. `fromNumberId` supplied for this call;
+2. the number assigned to the agent;
+3. the workspace's only eligible number, but only when exactly one exists.
+
+If several numbers are available and no choice can be resolved, Ringee refuses the call instead of guessing.
+
+## Conversation settings
+
+You can change:
+
+- when the assistant speaks: `assistant_speaks_first`, `assistant_generates_greeting` or `assistant_waits_for_user`;
+- the greeting;
+- the main instructions;
+- whether post-conversation instructions run;
+- post-conversation instructions.
+
+Safety instructions supplied by the agent type remain in effect when you replace the editable prompt. For example, an Appointment Booking agent still cannot invent availability.
+
+## Status lifecycle
+
+| Status     | Meaning                                                          |
+| ---------- | ---------------------------------------------------------------- |
+| `draft`    | More required setup is needed                                    |
+| `active`   | Ready to place calls                                             |
+| `disabled` | Deliberately prevented from placing calls                        |
+| `error`    | Provider synchronization failed; `lastError` contains the reason |
+
+Saving an eligible draft normally activates it. A disabled agent stays disabled after edits until you explicitly activate it. Call readiness is checked again immediately before every call.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Knowledge and analysis"
+    icon="book"
+    href="/voice-agents/knowledge-analysis"
+  >
+    Ground responses and extract structured data
+  </Card>
+  <Card title="Calls and results" icon="phone" href="/voice-agents/calls">
+    Trigger calls and interpret their lifecycle
+  </Card>
+</CardGroup>

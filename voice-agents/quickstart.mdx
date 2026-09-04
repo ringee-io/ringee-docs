@@ -1,0 +1,131 @@
+---
+title: AI Voice Agents quickstart
+sidebarTitle: Quickstart
+description: "Create an AI voice agent, test it and place the first real call"
+---
+
+This guide creates an agent in the dashboard. Once the agent exists, you can trigger it from the dashboard, API, MCP or CLI.
+
+## Before you start
+
+You need:
+
+- an active **organization** workspace;
+- a Ringee number eligible for outbound AI agent calls;
+- available Ringee credits, unless the user is on a free-call trial;
+- a connected Google or Microsoft calendar for an Appointment Booking agent;
+- a public backend URL when self-hosting, so provider callbacks and agent tools can reach Ringee.
+
+## Create the agent
+
+<Steps>
+<Step title="Open AI Voice Agents">
+
+Switch to an organization in Ringee, then open **AI Voice Agents** and choose **Create agent**.
+
+</Step>
+
+<Step title="Choose what the agent does">
+
+Choose **Appointment Booking** to offer real calendar slots and book a meeting, or **Reminders & Notifications** to deliver information and capture the response.
+
+</Step>
+
+<Step title="Set its identity and voice">
+
+Give the agent a name, add the company context it speaks for and choose a voice. The voice language controls the default greeting and instructions. Ringee currently curates English, Spanish, Portuguese, French, German and Italian voices.
+
+</Step>
+
+<Step title="Choose the model">
+
+Use **Ringee AI** for the included model with no extra credential. OpenAI, Anthropic and Google are bring-your-own-key options. Ringee verifies the key and sends it to the voice provider's secret store; Ringee stores only the resulting reference.
+
+</Step>
+
+<Step title="Finish the required setup">
+
+Assign a caller number. For Appointment Booking, connect a calendar, set the time zone, meeting duration and title. Save the agent and confirm that its status becomes `active`.
+
+</Step>
+</Steps>
+
+## Test in the browser
+
+Open the agent and start a test conversation. Ringee temporarily enables browser access for that agent and returns an expiration time. End the test when you finish; an automatic sweep also closes expired sessions.
+
+<Warning>
+  A browser test temporarily allows anonymous provider-side access to the
+  assistant. Keep the test window short and close it when you finish.
+  Self-hosters control the maximum duration with
+  `AI_VOICE_AGENT_TEST_SESSION_TTL_SECONDS`.
+</Warning>
+
+## Place the first call
+
+Use E.164 for automation surfaces, for example `+13055550123`. Supply every variable marked required for the selected agent type.
+
+<CodeGroup>
+
+```bash CLI
+ringee voice-agents list
+ringee voice-agents call <agentId> \
+  --to +13055550123 \
+  --var first_name=Carlos \
+  --var reason="Product demo" \
+  --yes
+```
+
+```json MCP
+{
+  "name": "start_ai_voice_agent_call",
+  "arguments": {
+    "agentId": "<agentId>",
+    "to": "+13055550123",
+    "variables": {
+      "first_name": "Carlos",
+      "reason": "Product demo"
+    }
+  }
+}
+```
+
+```bash API
+curl -X POST "https://api.ringee.io/api/v1/ai-voice-agents/<agentId>/calls" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+13055550123",
+    "variables": {
+      "first_name": "Carlos",
+      "reason": "Product demo"
+    }
+  }'
+```
+
+</CodeGroup>
+
+Starting a call is non-idempotent. Each successful request creates and places a new, billed call.
+
+## Read the result
+
+```bash
+ringee voice-agents call-result <callId>
+```
+
+The call can finish before its summary and extracted fields arrive. Poll again after the terminal status if those fields are still empty.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Configure the agent"
+    icon="sliders"
+    href="/voice-agents/configuration"
+  >
+    Types, voices, models and conversation behavior
+  </Card>
+  <Card title="Automate with MCP" icon="robot" href="/voice-agents/mcp">
+    Typed tools and confirmation guidance
+  </Card>
+</CardGroup>

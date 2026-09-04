@@ -1,0 +1,206 @@
+---
+title: Manage Custom Integrations
+sidebarTitle: Integration management
+description: "Create, configure, rotate and inspect Custom Integrations"
+---
+
+This page describes the dashboard's internal management surface for Custom Integrations: configuration, credentials, subscriptions, publishable keys, tests and logs. It is not part of the Public API.
+
+The `cik_live_…` key is for server-to-server Public API endpoints, including:
+
+- `POST /api/integrations/custom/webhook`
+- `POST /api/integrations/custom/click-to-call`
+- `/api/v1/ai-voice-agents/*`
+
+Use the Ringee dashboard for the management operations below. Do not call them as Public API endpoints.
+
+## Endpoints
+
+| Method   | Path                                                     | Purpose                                    |
+| -------- | -------------------------------------------------------- | ------------------------------------------ |
+| `GET`    | `/api/integrations/custom`                               | List integrations in the current workspace |
+| `POST`   | `/api/integrations/custom`                               | Create an integration                      |
+| `GET`    | `/api/integrations/custom/event-specs`                   | Read the machine-readable event contract   |
+| `GET`    | `/api/integrations/custom/:id`                           | Read one integration                       |
+| `PATCH`  | `/api/integrations/custom/:id`                           | Update settings and subscriptions          |
+| `DELETE` | `/api/integrations/custom/:id`                           | Delete an integration                      |
+| `POST`   | `/api/integrations/custom/:id/regenerate-api-key`        | Rotate the secret API key                  |
+| `POST`   | `/api/integrations/custom/:id/regenerate-signing-secret` | Rotate the webhook signing secret          |
+| `POST`   | `/api/integrations/custom/:id/publishable-keys`          | Mint a browser-safe Dialer SDK key         |
+| `POST`   | `/api/integrations/custom/:id/test-webhook`              | Send an immediate `test.ping`              |
+| `GET`    | `/api/integrations/custom/:id/inbound-logs`              | List accepted inbound events               |
+| `GET`    | `/api/integrations/custom/:id/outbound-logs`             | List outbound deliveries                   |
+
+All `:id` operations verify that the integration belongs to the authenticated workspace.
+
+## Create an integration
+
+```http
+POST /api/integrations/custom
+Content-Type: application/json
+
+{
+  "name": "Acme CRM"
+}
+```
+
+A successful create returns the integration summary plus two one-time secrets:
+
+```json
+{
+  "id": "ci_…",
+  "name": "Acme CRM",
+  "status": "active",
+  "apiKeyPrefix": "cik_live_a1b2c3d4",
+  "apiKeyLastUsedAt": null,
+  "outboundUrl": null,
+  "subscribedEvents": [],
+  "createdAt": "2026-09-04T14:00:00.000Z",
+  "updatedAt": "2026-09-04T14:00:00.000Z",
+  "apiKey": "cik_live_…",
+  "signingSecret": "whsec_…"
+}
+```
+
+<Warning>
+  `apiKey` and `signingSecret` are only returned when created or rotated. Store
+  them immediately in a server-side secret manager. Later reads return only
+  `apiKeyPrefix`.
+</Warning>
+
+## Read and update configuration
+
+`GET /api/integrations/custom` returns an array of summaries. `GET /api/integrations/custom/:id` returns one summary. Neither endpoint reveals a secret.
+
+Update one or more fields with `PATCH`:
+
+```http
+PATCH /api/integrations/custom/ci_…
+Content-Type: application/json
+
+{
+  "name": "Acme CRM production",
+  "outboundUrl": "https://crm.example.com/webhooks/ringee",
+  "subscribedEvents": [
+    "call_completed",
+    "call_outcome_updated",
+    "recording_ready"
+  ],
+  "status": "active"
+}
+```
+
+| Field              | Type                   | Behavior                                                                     |
+| ------------------ | ---------------------- | ---------------------------------------------------------------------------- |
+| `name`             | string                 | Trimmed; an empty value leaves the current name unchanged                    |
+| `outboundUrl`      | string or `null`       | Must start with `http://` or `https://`; `null` or an empty string clears it |
+| `subscribedEvents` | string[]               | Replaces the complete subscription list                                      |
+| `status`           | `active` or `disabled` | Enables or disables the integration                                          |
+
+Subscription values use database-style underscores in this endpoint:
+
+| Configuration value    | Outbound event         |
+| ---------------------- | ---------------------- |
+| `call_completed`       | `call.completed`       |
+| `call_outcome_updated` | `call.outcome.updated` |
+| `note_created`         | `note.created`         |
+| `callback_created`     | `callback.created`     |
+| `meeting_created`      | `meeting.created`      |
+| `recording_ready`      | `recording.ready`      |
+| `call_missed`          | `call.missed`          |
+| `call_failed`          | `call.failed`          |
+| `dnc_created`          | `dnc.created`          |
+
+`test.ping` is not a subscription. It is sent only by the test endpoint.
+
+<Note>
+  Setting `status` to `disabled` rejects the `cik_live_…` key, prevents new
+  outbound deliveries and invalidates Dialer SDK publishable keys.
+</Note>
+
+## Rotate credentials
+
+<AccordionGroup>
+  <Accordion title="API key">
+    `POST /api/integrations/custom/:id/regenerate-api-key` returns a new
+    `apiKey` and `apiKeyPrefix`. The previous `cik_live_…` key stops
+    working immediately.
+
+    Rotation also revokes every `pk_live_…` Dialer SDK key minted from this
+    integration. Mint replacements after rotating.
+
+  </Accordion>
+  <Accordion title="Webhook signing secret">
+    `POST /api/integrations/custom/:id/regenerate-signing-secret` returns a new
+    `signingSecret`. Ringee signs subsequent deliveries with it immediately.
+    There is no overlap window, so coordinate the change with your webhook
+    verifier and run a test afterward.
+  </Accordion>
+</AccordionGroup>
+
+## Mint a Dialer SDK key
+
+```http
+POST /api/integrations/custom/ci_…/publishable-keys
+Content-Type: application/json
+
+{
+  "allowedOrigins": [
+    "https://crm.example.com",
+    "https://staging.crm.example.com"
+  ]
+}
+```
+
+The response contains `publishableKey`, `integrationId`, `apiKeyPrefix` and the normalized `allowedOrigins`. A publishable key is safe to place in browser code, but it only works from its allowed origins.
+
+See [Dialer SDK publishable keys](/dialer-sdk/publishable-keys) for browser setup and revocation behavior.
+
+## Test the outbound webhook
+
+```http
+POST /api/integrations/custom/ci_…/test-webhook
+```
+
+Ringee sends one signed `test.ping` immediately and returns:
+
+```json
+{
+  "ok": true,
+  "statusCode": 204,
+  "latencyMs": 87
+}
+```
+
+On failure, `ok` is `false` and `error` explains the transport or configuration problem. This test is not queued and is not retried.
+
+## Inspect logs
+
+```http
+GET /api/integrations/custom/ci_…/inbound-logs?limit=50&cursor=…
+GET /api/integrations/custom/ci_…/outbound-logs?limit=50&cursor=…
+```
+
+Both endpoints return newest-first arrays. Use a `limit` from 1 to 200; it defaults to 50 and is capped at 200. For the next page, pass the last item's `id` as `cursor`.
+
+See [Logs and errors](/api/logs-and-errors) for the persisted fields and status meanings.
+
+## Delete an integration
+
+`DELETE /api/integrations/custom/:id` returns:
+
+```json
+{ "deleted": true }
+```
+
+<Warning>
+  Deletion is permanent for the integration configuration, links, inbound logs
+  and outbound delivery logs. Contacts, companies and their Ringee activity are
+  not deleted, but the integration's credentials stop working.
+</Warning>
+
+## Machine-readable event contract
+
+`GET /api/integrations/custom/event-specs` returns every inbound and outbound event with its required fields, optional fields, example payload and implementation notes. Use it to generate types or validate fixtures in CI.
+
+This endpoint belongs to the dashboard management surface and is not part of the Public API.

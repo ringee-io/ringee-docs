@@ -1,31 +1,31 @@
 ---
 title: Safety and confirmations
-description: 'How Ringee guards destructive and credit-spending tools'
+description: "How Ringee guards destructive and credit-spending tools"
 ---
 
 An AI assistant with access to your CRM can delete records, spend money and mint shareable links. Ringee's MCP server treats those three categories differently from ordinary reads and writes.
 
 ## Sensitivity classes
 
-| Class | Meaning | Tools |
-|---|---|---|
-| **Read** | Never modifies state | `list_workspaces`, `search_contacts`, `get_contact`, `find_contacts_by_outcome`, `list_calls`, `get_call_session`, `search_leads` |
-| **Write** | Ordinary modification | `switch_workspace`, `create_contact`, `update_contact`, `log_call_outcome`, `create_callback`, `schedule_meeting`, `update_call_session`, `import_leads_as_contacts` |
-| **Sensitive** | Spends provider credits or mints a shareable link | `reveal_lead`, `create_call_session` |
-| **Destructive** | Irreversible from the user's perspective | `delete_contact`, `delete_call_session` |
+| Class           | Meaning                                                   | Tools                                                                                                             |
+| --------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Read**        | Never modifies state                                      | Workspace, contact, call, campaign, analytics, callback, DNC, pipeline and AI voice-agent reads; `search_leads`   |
+| **Write**       | Ordinary modification                                     | `switch_workspace`, contact writes, outcomes, callbacks, meetings, lead import, campaign status/add, `add_to_dnc` |
+| **Sensitive**   | Spends credits, places a call or manages shareable access | `reveal_lead`, `create_call_session`, `update_call_session`, `start_ai_voice_agent_call`                          |
+| **Destructive** | Removes access/data or undoes a compliance block          | `delete_contact`, `delete_call_session`, `delete_campaign_lead`, `remove_from_dnc`                                |
 
 ## MCP annotations
 
 Every tool carries the standard MCP trust hints, so a client can surface the right warning without knowing anything about Ringee:
 
-| Hint | Meaning |
-|---|---|
-| `readOnlyHint` | The tool only reads. |
-| `destructiveHint` | The tool may perform irreversible updates. |
-| `idempotentHint` | Repeating the call with the same arguments has no extra effect. |
-| `openWorldHint` | The tool reaches an external system — an enrichment provider or a calendar. |
+| Hint              | Meaning                                                                     |
+| ----------------- | --------------------------------------------------------------------------- |
+| `readOnlyHint`    | The tool only reads.                                                        |
+| `destructiveHint` | The tool may perform irreversible updates.                                  |
+| `idempotentHint`  | Repeating the call with the same arguments has no extra effect.             |
+| `openWorldHint`   | The tool reaches an external system — an enrichment provider or a calendar. |
 
-`schedule_meeting`, `search_leads` and `reveal_lead` are the open-world tools: they sync calendars, send invites, or query Apollo/Prospeo.
+`schedule_meeting`, `search_leads`, `reveal_lead` and `start_ai_voice_agent_call` are open-world tools: they sync calendars, query Apollo/Prospeo or place a real phone call.
 
 ## Hard guards in the server
 
@@ -66,15 +66,27 @@ A mismatch returns an error telling the assistant to re-fetch the contact and as
 `update_call_session` can replace the contact queue only before the first call. Once dialing starts, the queue is frozen so progress and attribution stay coherent.
 
 </Accordion>
+
+<Accordion title="Campaign and DNC removal require confirmation">
+
+`delete_campaign_lead` requires `confirm: true` and refuses a lead that is locked, dialing or in a call. `remove_from_dnc` also requires `confirm: true`, because it makes a suppressed number callable again.
+
+</Accordion>
+
+<Accordion title="AI voice calls re-check operational gates">
+
+Before dialing, Ringee verifies the organization workspace, agent ownership and readiness, caller number, user's calling permission, DNC list, available credits and the selected agent type's required variables.
+
+</Accordion>
 </AccordionGroup>
 
 ## Credits
 
-<Note>
-MCP tools **never debit Ringee calling credits.** Lead search and reveal spend your connected enrichment provider's own allowance instead. The equivalent flows in the web app do charge Ringee credits — this difference is deliberate.
-</Note>
+`start_ai_voice_agent_call` creates a real call. Ringee debits the telephony leg and the AI conversation usage when provider records settle. Bring-your-own model providers can also bill your provider account.
 
-`reveal_lead` is explicitly flagged non-idempotent: repeating it spends the provider's credits again. Assistants should not retry it automatically after an ambiguous failure.
+`reveal_lead` consumes the connected enrichment provider's credits rather than Ringee calling credits. It is explicitly non-idempotent: repeating it can spend the provider's credits again.
+
+Assistants must not retry either `reveal_lead` or `start_ai_voice_agent_call` automatically after an ambiguous failure.
 
 ## What an assistant should do
 
@@ -95,7 +107,7 @@ Before a destructive action, state what will happen and to which record — name
 
 <Step title="Confirm spend">
 
-Before `reveal_lead`, say that provider credits will be spent and for which lead.
+Before `reveal_lead`, say that provider credits will be spent and for which lead. Before `start_ai_voice_agent_call`, name the agent and destination and explain that a real billed call will start.
 
 </Step>
 
@@ -118,11 +130,14 @@ These rules ship as machine-readable guardrails in [`@ringee-io/agent`](/cli/age
 
 The CLI enforces the same classes with explicit flags, so an autonomous agent cannot spend or delete by accident:
 
-| Action | Required flags |
-|---|---|
-| `leads reveal` | `--yes` |
-| `sessions create` | `--yes` |
-| `sessions revoke` | `--yes` |
-| `contacts delete` | `--confirm-phone <storedPhone>` **and** `--yes` |
+| Action                  | Required flags                                  |
+| ----------------------- | ----------------------------------------------- |
+| `leads reveal`          | `--yes`                                         |
+| `sessions create`       | `--yes`                                         |
+| `sessions revoke`       | `--yes`                                         |
+| `contacts delete`       | `--confirm-phone <storedPhone>` **and** `--yes` |
+| `campaigns delete-lead` | `--yes`                                         |
+| `dnc remove`            | `--yes`                                         |
+| `voice-agents call`     | `--yes`                                         |
 
 See [CLI commands](/cli/commands).

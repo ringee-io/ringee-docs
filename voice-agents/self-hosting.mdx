@@ -1,0 +1,87 @@
+---
+title: Self-host AI Voice Agents
+sidebarTitle: Self-hosting
+description: "Configure provider callbacks, models, limits, storage and background reconciliation"
+---
+
+AI Voice Agents run through the existing Ringee backend, database, Redis and Temporal worker. There is no separate agent service to deploy.
+
+## Required infrastructure
+
+| Component              | Why it is needed                                                             |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| PostgreSQL             | Stores agents, knowledge-source state, calls, results and settlement markers |
+| Redis                  | Tracks temporary browser test sessions                                       |
+| Temporal worker        | Runs expired-test cleanup and voice-agent billing/artifact sweeps            |
+| Public HTTPS backend   | Receives call status, conversation analysis and in-call tool callbacks       |
+| Telnyx API access      | Creates assistants, voices, calling applications, knowledge stores and calls |
+| Outbound Voice Profile | Pins server-originated calls to the intended billing route                   |
+
+Set `BACKEND_URL` and `PUBLIC_BACKEND_URL` to the same externally reachable API origin. Ringee writes callback and tool URLs under:
+
+```text
+https://your-api.example.com/api/call/webhook
+https://your-api.example.com/api/ai-voice-agents/webhooks/…
+https://your-api.example.com/api/ai-voice-agents/tools/…
+```
+
+Do not document or manually call the tokenized webhook URLs. Ringee provisions their authorization material and verifies it on every callback.
+
+## Environment variables
+
+| Variable                                  | Default                      | Purpose                                                                                                    |
+| ----------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `AI_VOICE_AGENT_PROFIT_MARGIN`            | `1`                          | Multiplier applied to the provider's AI conversation cost before Ringee debits credits; must be at least 1 |
+| `AI_VOICE_AGENT_RINGEE_MODEL`             | `moonshotai/Kimi-K2.6`       | Model id behind Ringee AI                                                                                  |
+| `AI_VOICE_AGENT_OPENAI_MODEL`             | `openai/gpt-5.2`             | Model id behind the OpenAI BYOK choice                                                                     |
+| `AI_VOICE_AGENT_ANTHROPIC_MODEL`          | `anthropic/claude-haiku-4-5` | Model id behind the Anthropic BYOK choice                                                                  |
+| `AI_VOICE_AGENT_GOOGLE_MODEL`             | `google/gemini-2.5-flash`    | Model id behind the Google BYOK choice                                                                     |
+| `AI_VOICE_AGENT_MAX_CALL_SECONDS`         | `900`                        | Hard maximum for one call; must be at least 30 seconds                                                     |
+| `AI_VOICE_AGENT_TEST_SESSION_TTL_SECONDS` | `600`                        | Browser test-access lifetime; must be at least 60 seconds                                                  |
+| `AI_VOICE_AGENT_STORAGE_REGION`           | `us-central-1`               | Provider object-storage region for knowledge bases                                                         |
+| `AI_VOICE_AGENT_MAX_DOCUMENT_MB`          | `20`                         | Largest accepted knowledge document                                                                        |
+
+The voice leg also uses `TELNYX_API_KEY`, normal call margin settings and Ringee's storage configuration for recovered recordings. Set `TELNYX_OUTBOUND_VOICE_PROFILE_ID` to pin calls to an explicit Telnyx billing route; if it is omitted, Ringee leaves the provider's default route in place.
+
+## Models and BYOK
+
+Self-hosters control the concrete model behind each stable UI choice. Changing a model setting changes what is used the next time an agent is synchronized; the stored agent keeps the provider family, not a user-selected arbitrary model id.
+
+OpenAI, Anthropic and Google keys are supplied per agent. Ringee verifies the key, hands it to the voice provider's secret store and persists only the reference.
+
+## Cost and artifact reconciliation
+
+The provider can publish call cost, recording and transcript data after the call has ended. Ringee's scheduled sweep therefore:
+
+1. binds any missing provider conversation id;
+2. repairs a stalled call timeline from usage records;
+3. settles the AI and telephony costs exactly once;
+4. retries recording and transcript recovery for up to 6 hours.
+
+Keep the Temporal worker running in production. An API-only deployment can place calls but cannot reliably finish cleanup and reconciliation.
+
+## Production checklist
+
+- `BACKEND_URL` and `PUBLIC_BACKEND_URL` contain the same public HTTPS origin.
+- Telnyx can reach `/api/call/webhook` and the generated voice-agent callback URLs.
+- When set, `TELNYX_OUTBOUND_VOICE_PROFILE_ID` belongs to the same provider account.
+- PostgreSQL, Redis and Temporal are reachable by both backend and worker.
+- At least one Ringee number is eligible for AI voice agent outbound use.
+- The maximum call and test-session durations match your risk policy.
+- Credit and call margins are set deliberately.
+- Recording storage and retention follow your consent and compliance policy.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Configuration reference"
+    icon="gear"
+    href="/configuration/reference"
+  >
+    All Ringee environment categories
+  </Card>
+  <Card title="API reference" icon="code" href="/voice-agents/api-reference">
+    Build an authenticated integration
+  </Card>
+</CardGroup>

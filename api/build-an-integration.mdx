@@ -1,13 +1,13 @@
 ---
 title: Build an integration
-description: 'An end-to-end blueprint for connecting a CRM to Ringee'
+description: "An end-to-end blueprint for connecting a CRM to Ringee"
 ---
 
 This guide is the shape of a production-grade Ringee integration: what to build, in what order, and the failure modes that bite everyone the first time.
 
 ## Architecture
 
-Every Ringee credential is server-side. Your frontend never talks to Ringee directly.
+The Custom Integration API key and webhook signing secret are server-side. Your frontend does not call the Public API directly. The separate Dialer SDK `pk_live_…` key is browser-safe when restricted to approved origins.
 
 ```mermaid
 flowchart LR;
@@ -28,21 +28,22 @@ flowchart LR;
 
 Two server-side entry points are enough:
 
-| Component | Responsibility |
-|---|---|
+| Component             | Responsibility                                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Outbound function** | Sends `contact.upserted` / `company.upserted` / `*.deleted` and performs click-to-call. Holds the API key. |
-| **Inbound webhook** | Receives Ringee events. Verifies the HMAC. Must be publicly reachable and must not require your own auth. |
+| **Inbound webhook**   | Receives Ringee events. Verifies the HMAC. Must be publicly reachable and must not require your own auth.  |
 
-## Secrets
+## Configuration and secrets
 
-| Secret | Used for |
-|---|---|
-| `RINGEE_API_BASE_URL` | `https://api.ringee.io`, or your self-hosted backend URL |
-| `RINGEE_API_KEY` | The `cik_live_…` key |
-| `RINGEE_WEBHOOK_SIGNING_SECRET` | The `whsec_…` secret used to verify incoming events |
+| Setting                         | Used for                                                 |
+| ------------------------------- | -------------------------------------------------------- |
+| `RINGEE_API_BASE_URL`           | `https://api.ringee.io`, or your self-hosted backend URL |
+| `RINGEE_API_KEY`                | The `cik_live_…` key                                     |
+| `RINGEE_WEBHOOK_SIGNING_SECRET` | The `whsec_…` secret used to verify incoming events      |
 
 <Warning>
-Never expose these in the frontend, in `localStorage`, in the repository, or in logs. Never send `RINGEE_API_KEY` from a browser.
+  Never expose `RINGEE_API_KEY` or `RINGEE_WEBHOOK_SIGNING_SECRET` in the
+  frontend, in `localStorage`, in the repository, or in logs.
 </Warning>
 
 ## Build order
@@ -96,7 +97,8 @@ Ringee sends `data.contact.externalId` when the record was previously linked. Re
 3. No match: create an **unlinked activity** showing the raw phone number.
 
 <Warning>
-Never create a duplicate contact from a call event. An unlinked activity is always better than a duplicate record.
+  Never create a duplicate contact from a call event. An unlinked activity is
+  always better than a duplicate record.
 </Warning>
 
 Normalize direction for display — the wire values may be `inbound`/`incoming` or `outbound`/`outgoing`.
@@ -176,7 +178,7 @@ Your webhook function may use administrative database credentials — but **only
 - Expired timestamp (more than 5 minutes old) is rejected.
 - Body modified after signing is rejected.
 - Duplicate `eventId` returns `200` and creates nothing.
-- `test.ping` returns `{ "received": true, "event": "test.ping" }`.
+- `test.ping` returns any `2xx` response.
 
 </Accordion>
 
@@ -206,7 +208,11 @@ Your webhook function may use administrative database credentials — but **only
 ## What Ringee does not send
 
 <Warning>
-Ringee notifies the **terminal** result of a call. There are no `call.started`, `call.ringing` or `call.answered` events — do not build a real-time incoming-call screen on top of this API. For live call state in your own UI, use the [Dialer SDK](/dialer-sdk/overview), which emits `dialing`, `ringing`, `answered` and `ended` in the browser.
+  Ringee notifies the **terminal** result of a call. There are no
+  `call.started`, `call.ringing` or `call.answered` events — do not build a
+  real-time incoming-call screen on top of this API. For live call state in your
+  own UI, use the [Dialer SDK](/dialer-sdk/overview), which emits `dialing`,
+  `ringing`, `answered` and `ended` in the browser.
 </Warning>
 
 ## Next steps

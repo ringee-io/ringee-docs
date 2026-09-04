@@ -1,14 +1,15 @@
 ---
 title: Ways to build on Ringee
 sidebarTitle: Build on Ringee
-description: 'Choose the right integration surface for what you are building'
+description: "Choose the right integration surface for what you are building"
 ---
 
-Ringee exposes four ways to build on top of it. They are complementary — most real integrations use two.
+Ringee exposes five ways to build on top of it. They are complementary—most real integrations use more than one.
 
 <CardGroup cols={2}>
   <Card title="Public API" icon="webhook" href="/api/overview">
-    Server to server. Sync CRM records, receive call activity, open a secure dialer.
+    Server to server. Sync CRM records, open a secure dialer and run AI Voice
+    Agents.
   </Card>
   <Card title="Dialer SDK" icon="phone" href="/dialer-sdk/overview">
     Browser. Embed a real dialer inside your own web app.
@@ -19,34 +20,41 @@ Ringee exposes four ways to build on top of it. They are complementary — most 
   <Card title="CLI" icon="terminal" href="/cli/overview">
     Terminal and scripts. The same capabilities as MCP, in a shell.
   </Card>
+  <Card title="AI Voice Agents" icon="robot" href="/voice-agents/overview">
+    Autonomous calling. Hold a real conversation and return a structured result.
+  </Card>
 </CardGroup>
 
 ## Pick by what you are building
 
-| I want to… | Use |
-|---|---|
-| Log Ringee calls as activities in my CRM | [Public API](/api/overview) |
-| Push my contacts into Ringee so they are callable | [Public API — inbound events](/api/inbound-events) |
-| Add a "Call" button with the least possible work | [Click-to-call](/api/click-to-call) |
-| Keep agents inside my product while they call | [Dialer SDK](/dialer-sdk/overview) |
-| Build a completely custom call interface | [Dialer SDK — headless](/dialer-sdk/headless) |
-| Let an assistant find leads and book follow-ups | [MCP](/mcp/overview) |
-| Script bulk operations or run them in CI | [CLI](/cli/overview) |
-| Give an autonomous agent access to Ringee | [CLI from an agent](/cli/agents) |
+| I want to…                                         | Use                                                |
+| -------------------------------------------------- | -------------------------------------------------- |
+| Log Ringee calls as activities in my CRM           | [Public API](/api/overview)                        |
+| Push my contacts into Ringee so they are callable  | [Public API — inbound events](/api/inbound-events) |
+| Add a "Call" button with the least possible work   | [Click-to-call](/api/click-to-call)                |
+| Keep agents inside my product while they call      | [Dialer SDK](/dialer-sdk/overview)                 |
+| Build a completely custom call interface           | [Dialer SDK — headless](/dialer-sdk/headless)      |
+| Let an assistant find leads and book follow-ups    | [MCP](/mcp/overview)                               |
+| Script bulk operations or run them in CI           | [CLI](/cli/overview)                               |
+| Give an autonomous agent access to Ringee          | [CLI from an agent](/cli/agents)                   |
+| Have an AI agent call, converse and book a meeting | [AI Voice Agents](/voice-agents/overview)          |
+| Trigger an AI voice call from my application       | [AI Voice Agents API](/voice-agents/api-reference) |
 
 ## Side by side
 
-| | Public API | Dialer SDK | MCP | CLI |
-|---|---|---|---|---|
-| Runs in | Your server | The browser | An AI client | A shell |
-| Credential | `cik_live_` (secret) | `pk_live_` (public) | MCP URL or OAuth | MCP URL |
-| Backend required | Yes | No | No | No |
-| Places calls | Via click-to-call | Yes | No | No |
-| Receives call activity | Yes, via webhooks | Live events only | Read on demand | Read on demand |
-| Custom UI | N/A | Yes | No | No |
+|                  | Public API                | Dialer SDK                | MCP                 | CLI                      | AI Voice Agents                             |
+| ---------------- | ------------------------- | ------------------------- | ------------------- | ------------------------ | ------------------------------------------- |
+| Runs in          | Your server               | The browser               | An AI client        | A shell                  | Ringee's backend                            |
+| Credential       | `cik_live_`               | `pk_live_`                | MCP URL or OAuth    | MCP URL                  | `cik_live_`, MCP URL or OAuth               |
+| Main purpose     | CRM sync and webhooks     | Human-operated calling UI | AI tool access      | Scripts and shell agents | Autonomous phone conversations              |
+| Places calls     | Human dialer and AI voice | Yes, over browser WebRTC  | AI voice calls only | AI voice calls only      | Yes, server-originated                      |
+| Receives results | Signed webhooks           | Live browser events       | Read on demand      | Read on demand           | Status, outcome, summary and extracted data |
 
 <Note>
-No integration surface can dial a number server-side. Calls run over WebRTC in a browser or mobile app. The Public API and MCP get someone dialing by handing them a secure link; the Dialer SDK does it in your own page.
+  Human-operated calls still run over WebRTC in a browser or mobile app. AI
+  Voice Agents are the deliberate exception: Ringee starts those calls
+  server-side, the configured agent holds the conversation, and API, MCP or CLI
+  can read the asynchronous result.
 </Note>
 
 ## A typical CRM integration
@@ -88,28 +96,31 @@ Subscribe to `call.completed`, `call.outcome.updated` and `recording.ready` and 
 
 ## Credentials at a glance
 
-| Credential | Belongs to | Where it lives |
-|---|---|---|
-| `cik_live_…` | Public API | Your server only |
-| `whsec_…` | Webhook verification | Your server only |
-| `pk_live_…` | Dialer SDK | Safe in the browser |
-| MCP URL | MCP and CLI | A secret manager or shell profile |
+| Credential   | Belongs to                     | Where it lives                    |
+| ------------ | ------------------------------ | --------------------------------- |
+| `cik_live_…` | Public API and AI Voice Agents | Your server only                  |
+| `whsec_…`    | Webhook verification           | Your server only                  |
+| `pk_live_…`  | Dialer SDK                     | Safe in the browser               |
+| MCP URL      | MCP and CLI                    | A secret manager or shell profile |
 
-All of them come from the same place: a **Custom Integration** in **Integrations → Custom Integrations**, except the MCP URL, which comes from `GET /api/mcp/connection-info`.
+Create `cik_live_…`, `whsec_…` and `pk_live_…` credentials from **Integrations → Custom Integrations**. The MCP URL comes from `GET /api/mcp/connection-info`.
 
 <Warning>
-`cik_live_` and `pk_live_` look similar and are minted by the same integration, but only `pk_live_` is browser-safe. Rotating the `cik_live_` key revokes every `pk_live_` key on that integration.
+  `cik_live_` and `pk_live_` look similar and are minted by the same
+  integration, but only `pk_live_` is browser-safe. Rotating the `cik_live_` key
+  revokes every `pk_live_` key on that integration.
 </Warning>
 
 ## Self-hosting
 
 Every surface works against a self-hosted deployment. Replace `https://api.ringee.io` with your own backend URL:
 
-| Surface | How |
-|---|---|
-| Public API | Use your `BACKEND_URL` as the base |
-| Dialer SDK | Pass `apiUrl` (the API origin, without `/api`) |
-| MCP | The URL from `GET /api/mcp/connection-info` already points at your host |
-| CLI | Set `RINGEE_BACKEND_URL` or the full `RINGEE_MCP_URL` |
+| Surface         | How                                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Public API      | Use your `BACKEND_URL` as the base                                                                   |
+| Dialer SDK      | Pass `apiUrl` (the API origin, without `/api`)                                                       |
+| MCP             | The URL from `GET /api/mcp/connection-info` already points at your host                              |
+| CLI             | Set `RINGEE_BACKEND_URL` or the full `RINGEE_MCP_URL`                                                |
+| AI Voice Agents | Set a public `PUBLIC_BACKEND_URL`, configure the voice provider and keep the Temporal worker running |
 
-See the [Configuration reference](/configuration/reference).
+See the [Configuration reference](/configuration/reference) and [AI Voice Agents self-hosting](/voice-agents/self-hosting).

@@ -1,0 +1,124 @@
+---
+title: Calls and results
+description: "Start AI voice agent calls safely and interpret their asynchronous results"
+---
+
+Starting an AI voice agent call creates a normal Ringee outbound call plus the voice-agent record that tracks the conversation and analysis.
+
+## Pre-call checks
+
+Ringee refuses the call unless all of these are true:
+
+- an organization workspace is active;
+- the agent belongs to that workspace and is ready;
+- outbound calling is enabled for the user;
+- the destination is not on the workspace's Do Not Call list;
+- the workspace has available credits, unless a free-call trial applies;
+- the chosen caller number is eligible for AI voice agent calls;
+- every required agent variable is present and no unknown variable was supplied.
+
+The destination is normalized to E.164 before dialing. MCP and CLI require E.164 at their own input boundary.
+
+## Start a call
+
+```json
+{
+  "to": "+13055550123",
+  "from_number_id": "1c93cab1-e97a-42e0-9ddf-e7a87cc950fd",
+  "variables": {
+    "first_name": "Carlos",
+    "reason": "Product demo"
+  },
+  "metadata": {
+    "external_id": "crm-contact-42"
+  }
+}
+```
+
+`metadata` is opaque caller data. Ringee stores it on the voice-agent call and echoes it back in the result, which makes it useful for CRM ids and workflow correlation.
+
+If the destination does not match an existing contact, Ringee creates one when possible. `first_name`, `last_name` and `email` fill the new contact's identity. A failure to create that convenience record does not block the requested call.
+
+<Warning>
+  Starting a call is non-idempotent and bills real usage. Do not automatically
+  retry an ambiguous response. First check whether a call id was returned or
+  whether the call appears in Ringee history.
+</Warning>
+
+## Call status
+
+Status describes the phone leg, not what the conversation achieved.
+
+| Status        | Meaning                                   |
+| ------------- | ----------------------------------------- |
+| `created`     | Ringee reserved the call record           |
+| `initiating`  | The provider accepted the dial request    |
+| `ringing`     | The destination is ringing                |
+| `in_progress` | The call connected                        |
+| `completed`   | The connected conversation ended          |
+| `no_answer`   | The destination did not answer            |
+| `busy`        | The destination was busy                  |
+| `voicemail`   | Voicemail was detected or reported        |
+| `failed`      | The call could not be placed or completed |
+
+## Outcomes
+
+Outcome describes what the conversation achieved. A `completed` call can still have `not_interested` or `unknown` as its outcome.
+
+| Outcome              | Meaning                                               |
+| -------------------- | ----------------------------------------------------- |
+| `appointment_booked` | The booking tool created a meeting                    |
+| `confirmed`          | The person confirmed or acknowledged the notification |
+| `cannot_attend`      | The person cannot make the appointment                |
+| `callback_requested` | The person asked for another call or follow-up        |
+| `not_interested`     | The person declined                                   |
+| `no_conversation`    | No useful conversation happened                       |
+| `unknown`            | The analysis could not classify the result            |
+
+## Polling
+
+Use the call id returned by the start request:
+
+<CodeGroup>
+
+```bash CLI
+ringee voice-agents call-result <callId> --json
+```
+
+```json MCP
+{
+  "name": "get_ai_voice_agent_call",
+  "arguments": { "callId": "<callId>" }
+}
+```
+
+```bash API
+curl "https://api.ringee.io/api/v1/ai-voice-agents/calls/<callId>" \
+  -H "X-Ringee-Api-Key: cik_live_xxxxxxxx…"
+```
+
+</CodeGroup>
+
+Stop polling once the status is terminal and the analysis fields your workflow needs are populated. Analysis can arrive shortly after the phone leg ends.
+
+## Billing
+
+An AI voice agent call has two provider-cost components:
+
+1. the ordinary telephony leg;
+2. the conversation engine and its model usage.
+
+Ringee settles both from provider usage records and debits each component exactly once. `AI_VOICE_AGENT_PROFIT_MARGIN` applies to the AI component; normal call margin settings apply to the voice leg. Bring-your-own model providers also bill the model usage to your provider account.
+
+The self-hosted `AI_VOICE_AGENT_MAX_CALL_SECONDS` value places a hard ceiling on one call.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="MCP" icon="robot" href="/voice-agents/mcp">
+    Let an assistant place and monitor a call
+  </Card>
+  <Card title="Self-hosting" icon="gear" href="/voice-agents/self-hosting">
+    Configure callbacks, models, limits and storage
+  </Card>
+</CardGroup>

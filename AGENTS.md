@@ -15,15 +15,16 @@
 
 ## Navigation
 
-Five tabs, each with its own directory:
+Six tabs, each with its own directory:
 
-| Tab | Directory | Covers |
-|---|---|---|
-| Documentation | root, `installation/`, `configuration/`, `providers/` | Self-hosting and operating Ringee |
-| Public API | `api/` | Custom Integrations — inbound events, webhooks, click-to-call |
-| MCP | `mcp/` | The MCP server, tools, workspaces, Claude and ChatGPT |
-| CLI | `cli/` | The `ringee` npm CLI and `@ringee-io/agent` |
-| Dialer SDK | `dialer-sdk/` | `@ringee/dialer-sdk` — embedding the dialer |
+| Tab             | Directory                                             | Covers                                                                                    |
+| --------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Documentation   | root, `installation/`, `configuration/`, `providers/` | Self-hosting and operating Ringee                                                         |
+| Public API      | `api/`                                                | Custom Integrations — inbound events, webhooks, click-to-call                             |
+| MCP             | `mcp/`                                                | The MCP server, tools, workspaces, Claude and ChatGPT                                     |
+| CLI             | `cli/`                                                | The `ringee` npm CLI and `@ringee-io/agent`                                               |
+| AI Voice Agents | `voice-agents/`                                       | Creating in the dashboard and running AI Voice Agents through the Public API, MCP and CLI |
+| Dialer SDK      | `dialer-sdk/`                                         | `@ringee/dialer-sdk` — embedding the dialer                                               |
 
 Adding a page means adding both the `.mdx` file and its entry in `docs.json`.
 
@@ -51,6 +52,6 @@ Adding a page means adding both the `.mdx` file and its entry in `docs.json`.
 ## Content boundaries
 
 - Do not document the `/backoffice` super-admin area or any internal-only tooling.
-- Do not invent events, endpoints, tools or CLI flags. Verify against the repo before writing — `packages/platform/src/custom-integrations/event-spec.ts`, `apps/backend/src/mcp/mcp.func.ts`, `apps/agent-cli/src/commands/`, and `packages/dialer-sdk/README.md` are the canonical sources for the four non-Documentation tabs.
+- Do not invent events, endpoints, tools or CLI flags. Verify against the repo before writing — `packages/platform/src/custom-integrations/event-spec.ts`, `apps/backend/src/mcp/mcp.func.ts`, `apps/agent-cli/src/commands/`, `apps/backend/src/api/routes/ai-voice-agent.controller.ts`, and `packages/dialer-sdk/README.md` are the canonical sources for the non-Documentation tabs.
 - Ringee emits terminal call events only. Never document `call.started`, `call.ringing` or `call.answered` as webhooks.
 - No fabricated testimonials, ratings or customer names.

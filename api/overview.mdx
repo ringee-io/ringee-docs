@@ -1,32 +1,42 @@
 ---
 title: Public API overview
 sidebarTitle: Overview
-description: 'Sync any CRM with Ringee through Custom Integrations'
+description: "Sync CRM data and run AI Voice Agents with a Custom Integration API key"
 ---
 
-The Ringee **Public API** — exposed as **Custom Integrations** — lets any external system push its contacts and companies into Ringee, receive Ringee's call activity back, and open a secure dialer for a specific contact.
+The Ringee **Public API** uses **Custom Integrations** to let an external system sync contacts and companies, receive call activity, open a secure dialer and run AI Voice Agents.
 
-It is a **bidirectional, event-based API**. You do not poll Ringee, and Ringee does not poll you.
+CRM synchronization is bidirectional and event-based. AI Voice Agent execution uses resource-oriented endpoints that return call ids for asynchronous result polling.
 
 <CardGroup cols={2}>
   <Card title="Authentication" icon="key" href="/api/authentication">
     Create an integration and get your `cik_live_` API key
   </Card>
-  <Card title="Build an integration" icon="wrench" href="/api/build-an-integration">
+  <Card title="AI Voice Agents" icon="robot" href="/voice-agents/api-reference">
+    List agents, start calls and read structured results
+  </Card>
+  <Card
+    title="Build an integration"
+    icon="wrench"
+    href="/api/build-an-integration"
+  >
     End-to-end guide with idempotency, retries and loop prevention
   </Card>
 </CardGroup>
 
 ## What you can do
 
-| Capability | Direction | Endpoint |
-|---|---|---|
-| Create and update contacts and companies | CRM → Ringee | `POST /api/integrations/custom/webhook` |
-| Archive deleted contacts and companies | CRM → Ringee | `POST /api/integrations/custom/webhook` |
-| Open a secure dialer for a contact | CRM → Ringee | `POST /api/integrations/custom/click-to-call` |
-| Receive completed, missed and failed calls | Ringee → CRM | Your webhook URL |
-| Receive outcomes, notes, callbacks, meetings | Ringee → CRM | Your webhook URL |
-| Receive recordings and Do Not Call entries | Ringee → CRM | Your webhook URL |
+| Capability                                   | Direction    | Endpoint                                      |
+| -------------------------------------------- | ------------ | --------------------------------------------- |
+| Create and update contacts and companies     | CRM → Ringee | `POST /api/integrations/custom/webhook`       |
+| Archive deleted contacts and companies       | CRM → Ringee | `POST /api/integrations/custom/webhook`       |
+| Open a secure dialer for a contact           | CRM → Ringee | `POST /api/integrations/custom/click-to-call` |
+| List configured AI Voice Agents              | App → Ringee | `GET /api/v1/ai-voice-agents`                 |
+| Start an autonomous AI voice call            | App → Ringee | `POST /api/v1/ai-voice-agents/:id/calls`      |
+| Read AI voice call results                   | App → Ringee | `GET /api/v1/ai-voice-agents/calls/:callId`   |
+| Receive completed, missed and failed calls   | Ringee → CRM | Your webhook URL                              |
+| Receive outcomes, notes, callbacks, meetings | Ringee → CRM | Your webhook URL                              |
+| Receive recordings and Do Not Call entries   | Ringee → CRM | Your webhook URL                              |
 
 ## How it works
 
@@ -40,12 +50,14 @@ flowchart LR;
 
     crm -- "POST /webhook (X-Ringee-Api-Key)" --> ringee
     crm -- "POST /click-to-call" --> ringee
+    crm -- "POST /v1/ai-voice-agents/:id/calls" --> ringee
     ringee -- "signed webhook (Ringee-Signature)" --> crm
 ```
 
 - **Inbound** (CRM → Ringee): you send events to a single Ringee endpoint, authenticated with your secret API key. See [Inbound events](/api/inbound-events).
 - **Outbound** (Ringee → CRM): Ringee sends HMAC-signed events to the URL you configure, with automatic retries. See [Outbound webhooks](/api/outbound-webhooks).
 - **Click-to-call**: you exchange a contact for a short-lived, signed dialer URL your agent opens in the browser. See [Click-to-call](/api/click-to-call).
+- **AI Voice Agents**: your server lists configured agents, starts calls and polls normalized results. See [AI Voice Agents API](/voice-agents/api-reference).
 
 ## The event envelope
 
@@ -70,16 +82,20 @@ Outbound events (Ringee → CRM) add two fields:
 ```
 
 <Note>
-`eventId` must be unique and stable per attempt. Both sides use it for deduplication, so retrying a failed delivery with the same `eventId` is always safe.
+  `eventId` must identify one logical event and remain stable across transport
+  retries. If Ringee returns `status: "failed"` while processing an inbound
+  event, fix the payload and use a **new** `eventId`; the original id is already
+  recorded.
 </Note>
 
 ## Choosing the right integration surface
 
-Ringee exposes three different ways to build on top of it. They solve different problems and can be combined.
+Ringee exposes several ways to build on top of it. They solve different problems and can be combined.
 
-<CardGroup cols={3}>
+<CardGroup cols={2}>
   <Card title="Public API" icon="webhook" href="/api/overview">
-    **Server to server.** Sync CRM records and receive call activity. Requires a backend.
+    **Server to server.** Sync CRM records and receive call activity. Requires a
+    backend.
   </Card>
   <Card title="Dialer SDK" icon="phone" href="/dialer-sdk/overview">
     **Browser.** Embed a real dialer in your own web app. No backend required.
@@ -87,15 +103,25 @@ Ringee exposes three different ways to build on top of it. They solve different 
   <Card title="MCP" icon="robot" href="/mcp/overview">
     **AI agents.** Let Claude or ChatGPT operate Ringee on the user's behalf.
   </Card>
+  <Card title="AI Voice Agents" icon="robot" href="/voice-agents/overview">
+    **Autonomous calls.** Place server-originated conversations and read
+    structured results.
+  </Card>
 </CardGroup>
 
 A typical CRM integration uses **both** the Public API (to sync data and log activity) and either **click-to-call** or the **Dialer SDK** (to actually place calls from the CRM UI).
 
+<Note>
+  Every inbound, click-to-call and AI Voice Agent request uses the Custom
+  Integration `cik_live_…` key. AI Voice Agent endpoints also accept that same
+  key as a Bearer credential.
+</Note>
+
 ## Base URL
 
-| Deployment | Base URL |
-|---|---|
-| Hosted | `https://api.ringee.io` |
+| Deployment  | Base URL                                                                     |
+| ----------- | ---------------------------------------------------------------------------- |
+| Hosted      | `https://api.ringee.io`                                                      |
 | Self-hosted | Your `BACKEND_URL` (see [Configuration reference](/configuration/reference)) |
 
 All endpoints in this section are relative to that base URL and live under the global `/api` prefix.
@@ -104,6 +130,7 @@ All endpoints in this section are relative to that base URL and live under the g
 
 - Ringee considers an outbound delivery failed if your endpoint does not respond within **15 seconds** or returns a non-2xx status.
 - Failed deliveries are retried up to **10 times** with exponential backoff, capped at **5 minutes** between attempts.
+- Event payloads can gain optional fields over time. Ignore unknown keys and validate the fields your integration actually needs.
 - Ringee currently emits **terminal** call events only. There are no `call.started`, `call.ringing` or `call.answered` events — do not build a real-time incoming-call screen on top of this API.
 
 ## Next steps

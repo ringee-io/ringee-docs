@@ -3,7 +3,7 @@
   "info": {
     "title": "Ringee Public API",
     "version": "1.0.0",
-    "description": "The Custom Integrations API. Push contacts and companies from your CRM into Ringee, and open a secure dialer for a contact.\n\nAuthenticate every request with the `cik_live_` secret key of a Custom Integration. The key must never reach a browser.",
+    "description": "The Ringee Public API. Sync contacts and companies, open a secure human dialer, and list, start and inspect AI Voice Agent calls.\n\nAuthenticate server-to-server requests with the `cik_live_` secret key of an active Custom Integration. The key identifies the integration and workspace and must never reach a browser. AI Voice Agent routes require an organization-scoped integration.",
     "contact": {
       "name": "Ringee",
       "url": "https://ringee.io"
@@ -36,9 +36,7 @@
         "operationId": "receiveInboundEvent",
         "summary": "Send an inbound event",
         "description": "Upsert or archive a contact or company from your CRM.\n\nReturns **202 Accepted** for any well-formed, authenticated request. The real result is in the `status` field of the response body \u2014 always read it.",
-        "tags": [
-          "CRM to Ringee"
-        ],
+        "tags": ["CRM to Ringee"],
         "requestBody": {
           "required": true,
           "content": {
@@ -148,7 +146,7 @@
                     }
                   },
                   "skipped": {
-                    "summary": "Duplicate eventId \u2014 already applied",
+                    "summary": "Duplicate eventId \u2014 already received",
                     "value": {
                       "status": "skipped",
                       "eventId": "crm_9f1c2a7e",
@@ -160,7 +158,7 @@
                     "value": {
                       "status": "failed",
                       "eventId": "crm_9f1c2a7e",
-                      "message": "phoneNumber is required"
+                      "message": "data.phoneNumber is required"
                     }
                   }
                 }
@@ -195,9 +193,7 @@
         "operationId": "createClickToCallSession",
         "summary": "Open a dialer for a contact",
         "description": "Exchange a contact for a short-lived, signed dialer URL. Your agent opens that URL and Ringee handles caller ID selection, credit checks and the WebRTC call.\n\nSend at least one of `contactExternalId` (linked to a contact that has a phone number) or `phoneNumber`.",
-        "tags": [
-          "CRM to Ringee"
-        ],
+        "tags": ["CRM to Ringee"],
         "requestBody": {
           "required": true,
           "content": {
@@ -282,6 +278,223 @@
           }
         }
       }
+    },
+    "/api/v1/ai-voice-agents": {
+      "get": {
+        "operationId": "listAiVoiceAgents",
+        "summary": "List AI Voice Agents",
+        "description": "Lists the configured agents available to the integration's organization, eligible caller numbers and the accepted variables for each agent type.",
+        "tags": ["AI Voice Agents"],
+        "security": [{ "ApiKeyAuth": [] }, { "BearerApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["appointment_booking", "reminders_notifications"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agents, pagination, eligible caller numbers and variables.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgentListResponse"
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid pagination or agent type." },
+          "401": {
+            "description": "Missing, invalid or disabled Custom Integration API key."
+          },
+          "403": {
+            "description": "The integration is not organization-scoped."
+          }
+        }
+      }
+    },
+    "/api/v1/ai-voice-agents/phone-numbers": {
+      "get": {
+        "operationId": "listAiVoiceAgentPhoneNumbers",
+        "summary": "List eligible caller numbers",
+        "description": "Lists the Ringee numbers this organization may present on an AI Voice Agent call.",
+        "tags": ["AI Voice Agents"],
+        "security": [{ "ApiKeyAuth": [] }, { "BearerApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Eligible caller numbers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VoiceAgentCallerNumber"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or disabled Custom Integration API key."
+          },
+          "403": {
+            "description": "The integration is not organization-scoped."
+          }
+        }
+      }
+    },
+    "/api/v1/ai-voice-agents/{agentId}/calls": {
+      "parameters": [
+        {
+          "name": "agentId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "operationId": "startAiVoiceAgentCall",
+        "summary": "Start an AI Voice Agent call",
+        "description": "Starts one real, potentially billed call. This operation is non-idempotent; do not automatically retry an ambiguous response.",
+        "tags": ["AI Voice Agents"],
+        "security": [{ "ApiKeyAuth": [] }, { "BearerApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartVoiceAgentCallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The call was created and dialing started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartVoiceAgentCallResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The agent is not ready, input is invalid, no caller number is usable or the provider rejected the call."
+          },
+          "401": {
+            "description": "Missing, invalid or disabled Custom Integration API key."
+          },
+          "403": {
+            "description": "The integration is not organization-scoped, calling is disabled, the destination is on DNC or credits are unavailable."
+          },
+          "404": {
+            "description": "The agent or caller number was not found in the integration's organization."
+          }
+        }
+      },
+      "get": {
+        "operationId": "listAiVoiceAgentCalls",
+        "summary": "List calls for an AI Voice Agent",
+        "tags": ["AI Voice Agents"],
+        "security": [{ "ApiKeyAuth": [] }, { "BearerApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized call results, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgentCallListResponse"
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid pagination." },
+          "401": {
+            "description": "Missing, invalid or disabled Custom Integration API key."
+          },
+          "403": {
+            "description": "The integration is not organization-scoped."
+          },
+          "404": {
+            "description": "The agent was not found in the integration's organization."
+          }
+        }
+      }
+    },
+    "/api/v1/ai-voice-agents/calls/{callId}": {
+      "get": {
+        "operationId": "getAiVoiceAgentCall",
+        "summary": "Read an AI Voice Agent call result",
+        "description": "Returns the normalized status, outcome and analysis for one call. Analysis fields can arrive shortly after the phone status becomes terminal.",
+        "tags": ["AI Voice Agents"],
+        "security": [{ "ApiKeyAuth": [] }, { "BearerApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "callId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The normalized call result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgentCallResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or disabled Custom Integration API key."
+          },
+          "403": {
+            "description": "The integration is not organization-scoped."
+          },
+          "404": {
+            "description": "The call was not found in the integration's organization."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -291,6 +504,12 @@
         "in": "header",
         "name": "X-Ringee-Api-Key",
         "description": "The `cik_live_` secret key of a Custom Integration. Shown once at creation. Server-side only."
+      },
+      "BearerApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "cik_live_…",
+        "description": "The same Custom Integration `cik_live_` API key, sent as a Bearer credential. Supported by AI Voice Agent routes."
       }
     },
     "schemas": {
@@ -298,12 +517,7 @@
         "type": "object",
         "title": "contact.upserted",
         "description": "Create or update a contact from your CRM's current state.",
-        "required": [
-          "event",
-          "eventId",
-          "occurredAt",
-          "data"
-        ],
+        "required": ["event", "eventId", "occurredAt", "data"],
         "properties": {
           "event": {
             "type": "string",
@@ -313,58 +527,43 @@
           "eventId": {
             "type": "string",
             "description": "Unique, stable id for this event. Ringee deduplicates on it.",
-            "examples": [
-              "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T"
-            ],
+            "examples": ["crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T"],
             "example": "crm_01HX5Z7K8MZP1Q4V0G9YJ2RH3T"
           },
           "occurredAt": {
             "type": "string",
             "format": "date-time",
             "description": "When the change happened in your system.",
-            "examples": [
-              "2026-05-23T14:30:00.000Z"
-            ],
+            "examples": ["2026-05-23T14:30:00.000Z"],
             "example": "2026-05-23T14:30:00.000Z"
           },
           "data": {
             "type": "object",
-            "required": [
-              "externalId",
-              "phoneNumber"
-            ],
+            "required": ["externalId", "phoneNumber"],
             "description": "Omit a field to leave it untouched. Sending `null`, `undefined` or an empty string does not overwrite an existing value.",
             "properties": {
               "externalId": {
                 "type": "string",
                 "description": "Stable id of the contact in your system. This is the join key for every later event.",
-                "examples": [
-                  "ext_contact_42"
-                ],
+                "examples": ["ext_contact_42"],
                 "example": "ext_contact_42"
               },
               "phoneNumber": {
                 "type": "string",
                 "description": "Phone in any format; normalized to E.164 when possible. Required because Ringee must be able to dial the contact.",
-                "examples": [
-                  "+14155550123"
-                ],
+                "examples": ["+14155550123"],
                 "example": "+14155550123"
               },
               "firstName": {
                 "type": "string",
                 "description": "Given name.",
-                "examples": [
-                  "Ada"
-                ],
+                "examples": ["Ada"],
                 "example": "Ada"
               },
               "lastName": {
                 "type": "string",
                 "description": "Family name.",
-                "examples": [
-                  "Lovelace"
-                ],
+                "examples": ["Lovelace"],
                 "example": "Lovelace"
               },
               "fullName": {
@@ -378,17 +577,13 @@
               "email": {
                 "type": "string",
                 "description": "Primary email.",
-                "examples": [
-                  "ada@example.com"
-                ],
+                "examples": ["ada@example.com"],
                 "example": "ada@example.com"
               },
               "companyExternalId": {
                 "type": "string",
                 "description": "External company id to link this contact to.",
-                "examples": [
-                  "ext_company_7"
-                ],
+                "examples": ["ext_company_7"],
                 "example": "ext_company_7"
               },
               "companyName": {
@@ -398,21 +593,17 @@
               "jobTitle": {
                 "type": "string",
                 "description": "Position or title.",
-                "examples": [
-                  "Founder"
-                ],
+                "examples": ["Founder"],
                 "example": "Founder"
               },
               "ownerExternalId": {
                 "type": "string",
-                "description": "External owner id (sales rep)."
+                "description": "External owner id accepted in the stored snapshot. It is not currently used for Ringee owner resolution; use `ownerEmail`."
               },
               "ownerEmail": {
                 "type": "string",
                 "description": "Owner email \u2014 resolves to a Ringee user when the integration is organization-scoped.",
-                "examples": [
-                  "rep@example.com"
-                ],
+                "examples": ["rep@example.com"],
                 "example": "rep@example.com"
               },
               "source": {
@@ -437,12 +628,7 @@
         "type": "object",
         "title": "company.upserted",
         "description": "Create or update a company. Deduplicated on `externalId`, then `domain`.",
-        "required": [
-          "event",
-          "eventId",
-          "occurredAt",
-          "data"
-        ],
+        "required": ["event", "eventId", "occurredAt", "data"],
         "properties": {
           "event": {
             "type": "string",
@@ -452,40 +638,29 @@
           "eventId": {
             "type": "string",
             "description": "Unique, stable id for this event.",
-            "examples": [
-              "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA"
-            ],
+            "examples": ["crm_01HX5Z8FYBKD7QY5W3JN9NF2EA"],
             "example": "crm_01HX5Z8FYBKD7QY5W3JN9NF2EA"
           },
           "occurredAt": {
             "type": "string",
             "format": "date-time",
-            "examples": [
-              "2026-05-23T14:30:05.000Z"
-            ],
+            "examples": ["2026-05-23T14:30:05.000Z"],
             "example": "2026-05-23T14:30:05.000Z"
           },
           "data": {
             "type": "object",
-            "required": [
-              "externalId",
-              "name"
-            ],
+            "required": ["externalId", "name"],
             "properties": {
               "externalId": {
                 "type": "string",
                 "description": "Stable id of the company in your system.",
-                "examples": [
-                  "ext_company_7"
-                ],
+                "examples": ["ext_company_7"],
                 "example": "ext_company_7"
               },
               "name": {
                 "type": "string",
                 "description": "Display name.",
-                "examples": [
-                  "Babbage Engines Ltd."
-                ],
+                "examples": ["Babbage Engines Ltd."],
                 "example": "Babbage Engines Ltd."
               },
               "legalName": {
@@ -495,25 +670,19 @@
               "domain": {
                 "type": "string",
                 "description": "Primary web domain \u2014 used as a secondary dedup signal.",
-                "examples": [
-                  "babbage.example.com"
-                ],
+                "examples": ["babbage.example.com"],
                 "example": "babbage.example.com"
               },
               "industry": {
                 "type": "string",
                 "description": "Industry label.",
-                "examples": [
-                  "Hardware"
-                ],
+                "examples": ["Hardware"],
                 "example": "Hardware"
               },
               "size": {
                 "type": "string",
                 "description": "Headcount band.",
-                "examples": [
-                  "11-50"
-                ],
+                "examples": ["11-50"],
                 "example": "11-50"
               },
               "phone": {
@@ -546,12 +715,7 @@
         "type": "object",
         "title": "contact.deleted",
         "description": "Archives the integration's link to the contact. Ringee never deletes the underlying contact \u2014 call history, notes, callbacks and meetings are preserved.",
-        "required": [
-          "event",
-          "eventId",
-          "occurredAt",
-          "data"
-        ],
+        "required": ["event", "eventId", "occurredAt", "data"],
         "properties": {
           "event": {
             "type": "string",
@@ -560,31 +724,23 @@
           },
           "eventId": {
             "type": "string",
-            "examples": [
-              "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC"
-            ],
+            "examples": ["crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC"],
             "example": "crm_01HX5Z9MQ7G3T2DR0NXJW1B8VC"
           },
           "occurredAt": {
             "type": "string",
             "format": "date-time",
-            "examples": [
-              "2026-05-23T14:35:00.000Z"
-            ],
+            "examples": ["2026-05-23T14:35:00.000Z"],
             "example": "2026-05-23T14:35:00.000Z"
           },
           "data": {
             "type": "object",
-            "required": [
-              "externalId"
-            ],
+            "required": ["externalId"],
             "properties": {
               "externalId": {
                 "type": "string",
                 "description": "The external contact id you previously sent in `contact.upserted`.",
-                "examples": [
-                  "ext_contact_42"
-                ],
+                "examples": ["ext_contact_42"],
                 "example": "ext_contact_42"
               }
             }
@@ -595,12 +751,7 @@
         "type": "object",
         "title": "company.deleted",
         "description": "Archives the integration's link to the company.",
-        "required": [
-          "event",
-          "eventId",
-          "occurredAt",
-          "data"
-        ],
+        "required": ["event", "eventId", "occurredAt", "data"],
         "properties": {
           "event": {
             "type": "string",
@@ -609,31 +760,23 @@
           },
           "eventId": {
             "type": "string",
-            "examples": [
-              "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K"
-            ],
+            "examples": ["crm_01HX5ZA1H4T6N2DR9CB7YP6F0K"],
             "example": "crm_01HX5ZA1H4T6N2DR9CB7YP6F0K"
           },
           "occurredAt": {
             "type": "string",
             "format": "date-time",
-            "examples": [
-              "2026-05-23T14:35:30.000Z"
-            ],
+            "examples": ["2026-05-23T14:35:30.000Z"],
             "example": "2026-05-23T14:35:30.000Z"
           },
           "data": {
             "type": "object",
-            "required": [
-              "externalId"
-            ],
+            "required": ["externalId"],
             "properties": {
               "externalId": {
                 "type": "string",
                 "description": "The external company id you previously sent in `company.upserted`.",
-                "examples": [
-                  "ext_company_7"
-                ],
+                "examples": ["ext_company_7"],
                 "example": "ext_company_7"
               }
             }
@@ -642,18 +785,11 @@
       },
       "InboundResult": {
         "type": "object",
-        "required": [
-          "status",
-          "eventId"
-        ],
+        "required": ["status", "eventId"],
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "processed",
-              "skipped",
-              "failed"
-            ],
+            "enum": ["processed", "skipped", "failed"],
             "description": "`processed` \u2014 applied. `skipped` \u2014 duplicate `eventId`, already applied earlier; treat as success. `failed` \u2014 accepted but could not be applied; fix and resend with a **new** `eventId`."
           },
           "eventId": {
@@ -672,33 +808,25 @@
           "contactExternalId": {
             "type": "string",
             "description": "The contact's id in your CRM. Resolves to a Ringee contact if you previously synced it with `contact.upserted`.",
-            "examples": [
-              "ext_contact_42"
-            ],
+            "examples": ["ext_contact_42"],
             "example": "ext_contact_42"
           },
           "phoneNumber": {
             "type": "string",
-            "description": "Destination number. Required unless `contactExternalId` resolves to a contact that already has one.",
-            "examples": [
-              "+14155550123"
-            ],
+            "description": "Destination number. Required unless `contactExternalId` resolves to a contact that already has one. When both are provided, this explicit number wins.",
+            "examples": ["+14155550123"],
             "example": "+14155550123"
           },
           "agentEmail": {
             "type": "string",
-            "description": "Email of the Ringee user who will place the call. **Required for organization workspaces.** Take it from your authenticated session, never from a value the browser sent.",
-            "examples": [
-              "rep@example.com"
-            ],
+            "description": "Email of the Ringee user who will place the call. **Required for organization workspaces unless `ownerEmail` is provided.** Take it from your authenticated session, never from a value the browser sent.",
+            "examples": ["rep@example.com"],
             "example": "rep@example.com"
           },
           "fromNumber": {
             "type": "string",
             "description": "Caller ID to use. Defaults to the agent's first active verified caller ID, then any purchased number on the workspace.",
-            "examples": [
-              "+14155550100"
-            ],
+            "examples": ["+14155550100"],
             "example": "+14155550100"
           },
           "ownerEmail": {
@@ -724,38 +852,27 @@
         ],
         "properties": {
           "contactId": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "The Ringee contact, when `contactExternalId` resolved to one. `null` otherwise.",
-            "examples": [
-              "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55"
-            ],
+            "examples": ["6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55"],
             "example": "6b2f8f1e-6a2e-4f1c-9a3d-2d1b0c7e4a55"
           },
           "agentUserId": {
             "type": "string",
             "description": "The Ringee user who will place the call.",
-            "examples": [
-              "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0"
-            ],
+            "examples": ["a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0"],
             "example": "a91c4d77-1f0b-4a2e-8c3d-77b1e2f4a9c0"
           },
           "toNumber": {
             "type": "string",
-            "description": "Normalized destination in E.164.",
-            "examples": [
-              "+14155550123"
-            ],
+            "description": "Destination normalized toward E.164 when possible.",
+            "examples": ["+14155550123"],
             "example": "+14155550123"
           },
           "fromNumber": {
             "type": "string",
             "description": "The caller ID Ringee selected.",
-            "examples": [
-              "+14155550100"
-            ],
+            "examples": ["+14155550100"],
             "example": "+14155550100"
           },
           "dialerUrl": {
@@ -769,17 +886,211 @@
           },
           "sessionToken": {
             "type": "string",
-            "description": "The signed session, already embedded in `dialerUrl`. Never return it to the browser, persist it, or write it to logs \u2014 it authorizes a call on the agent's behalf."
+            "description": "The signed session, already embedded in `dialerUrl`. Do not expose this field separately, persist it, or write it to logs \u2014 it authorizes a call on the agent's behalf."
           },
           "expiresAt": {
             "type": "string",
             "format": "date-time",
             "description": "Expiry of the dialer session.",
-            "examples": [
-              "2026-05-23T14:35:00.000Z"
-            ],
+            "examples": ["2026-05-23T14:35:00.000Z"],
             "example": "2026-05-23T14:35:00.000Z"
           }
+        }
+      },
+      "VoiceAgentVariable": {
+        "type": "object",
+        "required": ["key", "label", "required", "description"],
+        "properties": {
+          "key": { "type": "string", "example": "first_name" },
+          "label": { "type": "string", "example": "First name" },
+          "required": { "type": "boolean", "example": true },
+          "description": {
+            "type": "string",
+            "example": "The first name of the person being called."
+          }
+        }
+      },
+      "VoiceAgentCallerNumber": {
+        "type": "object",
+        "required": ["id", "phoneNumber", "isoCountry", "kind"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "phoneNumber": { "type": "string", "example": "+13055550100" },
+          "isoCountry": { "type": "string", "example": "US" },
+          "kind": { "type": "string", "example": "purchased" }
+        }
+      },
+      "VoiceAgentSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "status",
+          "voice",
+          "callCount",
+          "callerNumberId",
+          "callsFrom",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "Maya" },
+          "type": {
+            "type": "string",
+            "enum": ["appointment_booking", "reminders_notifications"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "disabled", "error"]
+          },
+          "voice": { "type": ["string", "null"], "example": "Carolina" },
+          "callCount": { "type": "integer", "minimum": 0, "example": 14 },
+          "callerNumberId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "callsFrom": {
+            "type": ["string", "null"],
+            "example": "+13055550100"
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "VoiceAgentListResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "total",
+          "page",
+          "limit",
+          "callerNumbers",
+          "variablesByType"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VoiceAgentSummary" }
+          },
+          "total": { "type": "integer", "minimum": 0 },
+          "page": { "type": "integer", "minimum": 1 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "callerNumbers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoiceAgentCallerNumber"
+            }
+          },
+          "variablesByType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/VoiceAgentVariable" }
+            }
+          }
+        }
+      },
+      "StartVoiceAgentCallRequest": {
+        "type": "object",
+        "required": ["to"],
+        "properties": {
+          "to": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "+13055550123"
+          },
+          "from_number_id": { "type": "string", "format": "uuid" },
+          "variables": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "example": {
+              "first_name": "Carlos",
+              "reason": "Product demo"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": { "external_id": "crm-contact-42" }
+          }
+        }
+      },
+      "StartVoiceAgentCallResponse": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["created", "initiating"]
+          }
+        }
+      },
+      "VoiceAgentCallResult": {
+        "type": "object",
+        "required": [
+          "call_id",
+          "status",
+          "outcome",
+          "summary",
+          "sentiment",
+          "extracted_data",
+          "metadata"
+        ],
+        "properties": {
+          "call_id": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "initiating",
+              "ringing",
+              "in_progress",
+              "completed",
+              "no_answer",
+              "busy",
+              "voicemail",
+              "failed"
+            ]
+          },
+          "outcome": {
+            "type": ["string", "null"],
+            "enum": [
+              "appointment_booked",
+              "confirmed",
+              "cannot_attend",
+              "callback_requested",
+              "not_interested",
+              "no_conversation",
+              "unknown",
+              null
+            ]
+          },
+          "summary": { "type": ["string", "null"] },
+          "sentiment": { "type": ["string", "null"] },
+          "extracted_data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "VoiceAgentCallListResponse": {
+        "type": "object",
+        "required": ["data", "total", "page", "limit"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VoiceAgentCallResult" }
+          },
+          "total": { "type": "integer", "minimum": 0 },
+          "page": { "type": "integer", "minimum": 1 },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
         }
       },
       "Error": {
@@ -787,9 +1098,7 @@
         "properties": {
           "statusCode": {
             "type": "integer",
-            "examples": [
-              400
-            ],
+            "examples": [400],
             "example": 400
           },
           "message": {
@@ -802,9 +1111,7 @@
           },
           "error": {
             "type": "string",
-            "examples": [
-              "Bad Request"
-            ],
+            "examples": ["Bad Request"],
             "example": "Bad Request"
           }
         }

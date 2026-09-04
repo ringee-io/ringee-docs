@@ -1,0 +1,85 @@
+---
+title: Knowledge and analysis
+description: "Ground an AI Voice Agent and define the structured result it produces"
+---
+
+Knowledge helps an agent answer company-specific questions during a call. Post-call analysis turns the finished conversation into a summary, outcome, sentiment and custom fields.
+
+## Knowledge sources
+
+Each source is indexed separately and attached to the agent only after it reaches `ready`.
+
+| Kind          | Input                                                       | Limits                                                           |
+| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| URL           | A public `http` or `https` page                             | Private, loopback and local network targets are rejected         |
+| Text          | A label and plain text                                      | 100,000 characters                                               |
+| Document      | PDF, TXT, Markdown, DOC or DOCX                             | 20 MB by default; controlled by `AI_VOICE_AGENT_MAX_DOCUMENT_MB` |
+| Reused source | A source already uploaded to another agent in the workspace | Duplicate content already on the target agent is flagged         |
+
+### Indexing states
+
+| Status       | Meaning                                                     |
+| ------------ | ----------------------------------------------------------- |
+| `pending`    | The source was accepted but indexing has not started        |
+| `processing` | The provider is building the knowledge index                |
+| `ready`      | The source is attached and available during calls           |
+| `failed`     | Indexing failed; `lastError` explains the provider response |
+
+Reading the knowledge list refreshes pending states. If a source became ready but attaching it failed, Ringee retries the agent synchronization instead of requiring another upload.
+
+<Tip>
+  Use one source per coherent topic. Several small, clearly labeled sources are
+  easier to replace and diagnose than one large document containing unrelated
+  material.
+</Tip>
+
+## Built-in analysis
+
+| Result    |   Default | Notes                                    |
+| --------- | --------: | ---------------------------------------- |
+| Outcome   | Always on | The closed set depends on the agent type |
+| Summary   |        On | Concise account of what happened         |
+| Sentiment |       Off | Free-form provider sentiment label       |
+
+Analysis arrives asynchronously after the call. A terminal call can briefly have `null` for `outcome`, `summary` or `sentiment`.
+
+## Custom extraction fields
+
+An agent can extract up to 20 custom fields.
+
+| Field         | Rule                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `key`         | Starts with a lowercase letter; lowercase letters, numbers and underscores only; max 60 characters |
+| `label`       | Max 80 characters                                                                                  |
+| `type`        | `text`, `number`, `boolean` or `select`                                                            |
+| `description` | Max 300 characters                                                                                 |
+| `options`     | Up to 20 values for `select`                                                                       |
+
+```json
+{
+  "key": "budget_range",
+  "label": "Budget range",
+  "type": "select",
+  "description": "The budget the person said is available.",
+  "options": ["under_5k", "5k_to_10k", "over_10k", "unknown"]
+}
+```
+
+Extracted values appear under `extracted_data` in the API, MCP and CLI result.
+
+## Recordings and transcripts
+
+AI voice agent calls are recorded. Ringee also imports the transcript produced by the live conversation engine. It stores agent speech as outbound turns and the other person's speech as inbound turns; internal tool calls are not included as spoken text.
+
+Recording and transcript recovery is best-effort and retried after the call. They appear on the corresponding Ringee call record, not inside the compact AI voice agent result.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Calls and results" icon="phone" href="/voice-agents/calls">
+    Status, outcomes, metadata and billing
+  </Card>
+  <Card title="API reference" icon="code" href="/voice-agents/api-reference">
+    Knowledge and configuration endpoints
+  </Card>
+</CardGroup>

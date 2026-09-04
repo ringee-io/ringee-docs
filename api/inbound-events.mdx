@@ -1,25 +1,35 @@
 ---
 title: Inbound events
-description: 'Push contacts and companies from your CRM into Ringee'
-openapi: 'POST /api/integrations/custom/webhook'
+description: "Push contacts and companies from your CRM into Ringee"
+openapi: "POST /api/integrations/custom/webhook"
 ---
 
 Send everything your CRM knows about a contact or company to a single Ringee endpoint. Ringee upserts the record, links it to your `externalId`, and makes it callable.
 
 Pick the event you are sending in the request body above — each one has its own `data` shape.
 
+Every request uses the shared envelope:
+
+| Field        | Type   | Required | Description                               |
+| ------------ | ------ | -------- | ----------------------------------------- |
+| `event`      | string | Yes      | One of the four inbound event names below |
+| `eventId`    | string | Yes      | Stable unique id for this logical event   |
+| `occurredAt` | string | Yes      | ISO-8601 timestamp from your system       |
+| `data`       | object | Yes      | Event-specific payload                    |
+
 ## Reading the response
 
 The endpoint returns **202 Accepted** for any well-formed, authenticated request. The real result is in the JSON body.
 
-| Status | Meaning | What to do |
-|---|---|---|
-| <span className="rg-badge rg-get">processed</span> | The event was applied. | Mark the sync as successful. |
-| <span className="rg-badge rg-neutral">skipped</span> | Duplicate `eventId`. Already applied earlier. | Treat as success. |
-| <span className="rg-badge rg-destructive">failed</span> | The event was accepted but could not be applied. | Show `message`, mark as a sync failure, fix and resend with a **new** `eventId`. |
+| Status                                                  | Meaning                                          | What to do                                                                                      |
+| ------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| <span className="rg-badge rg-get">processed</span>      | The event was applied.                           | Mark the sync as successful.                                                                    |
+| <span className="rg-badge rg-neutral">skipped</span>    | Ringee already recorded this `eventId`.          | Do not process it again. Preserve the original result; retry a corrected failure with a new id. |
+| <span className="rg-badge rg-destructive">failed</span> | The event was accepted but could not be applied. | Show `message`, mark as a sync failure, fix and resend with a **new** `eventId`.                |
 
 <Warning>
-A `202` status code only means the transport was accepted. Do not treat it as a successful sync without checking `status` in the body.
+  A `202` status code only means the transport was accepted. Do not treat it as
+  a successful sync without checking `status` in the body.
 </Warning>
 
 ## Event examples
@@ -48,9 +58,31 @@ Create or update a contact from your CRM's current state.
 }
 ```
 
+| `data` field                                | Type   | Required | Description                                                           |
+| ------------------------------------------- | ------ | -------- | --------------------------------------------------------------------- |
+| `externalId`                                | string | Yes      | Stable contact id in your system                                      |
+| `phoneNumber`                               | string | Yes      | Dialable number; normalized toward E.164 when possible                |
+| `name`, `firstName`, `lastName`, `fullName` | string | No       | Available name representations                                        |
+| `email`                                     | string | No       | Primary email                                                         |
+| `companyExternalId`                         | string | No       | External company id to link                                           |
+| `companyName`                               | string | No       | Fallback company name when a linked company is unavailable            |
+| `jobTitle`                                  | string | No       | Contact position or title                                             |
+| `ownerEmail`                                | string | No       | Resolves a Ringee member in an organization workspace                 |
+| `ownerExternalId`                           | string | No       | Accepted in the snapshot, but not currently used for owner resolution |
+| `source`                                    | string | No       | Lead source label                                                     |
+| `customFields`                              | object | No       | Arbitrary contact fields                                              |
+| `crmMetadata`                               | object | No       | Provider-specific metadata                                            |
+
 <Note>
-**Deduplication order:** `externalId` first, then `phoneNumber` within the same workspace. Sending `null`, `undefined` or empty strings does **not** overwrite existing values — omit a field to leave it untouched.
+  **Deduplication order:** `externalId` first, then `phoneNumber` within the
+  same workspace. Sending `null`, `undefined` or empty strings does **not**
+  overwrite existing values — omit a field to leave it untouched.
 </Note>
+
+<Info>
+  In an organization workspace, an unknown `ownerEmail` leaves the contact
+  unassigned. In a personal workspace, the integration owner is used.
+</Info>
 
 </Tab>
 
@@ -71,8 +103,24 @@ Create or update a contact from your CRM's current state.
 }
 ```
 
+| `data` field   | Type   | Required | Description                                       |
+| -------------- | ------ | -------- | ------------------------------------------------- |
+| `externalId`   | string | Yes      | Stable company id in your system                  |
+| `name`         | string | Yes      | Display name                                      |
+| `legalName`    | string | No       | Registered legal name                             |
+| `domain`       | string | No       | Primary domain and secondary deduplication signal |
+| `industry`     | string | No       | Industry label                                    |
+| `size`         | string | No       | Headcount band, such as `11-50`                   |
+| `phone`        | string | No       | Main phone                                        |
+| `website`      | string | No       | Homepage URL                                      |
+| `source`       | string | No       | Source label                                      |
+| `customFields` | object | No       | Arbitrary company fields                          |
+| `crmMetadata`  | object | No       | Provider-specific metadata                        |
+
 <Note>
-**Deduplication order:** `externalId`, then `domain` within the same workspace.
+  **Deduplication order:** `externalId`, then `domain` within the same
+  workspace. As with contacts, `null`, `undefined` and empty strings do not
+  clear existing values.
 </Note>
 
 </Tab>
@@ -91,7 +139,10 @@ Marks the contact as archived in Ringee.
 ```
 
 <Info>
-Ringee never deletes the underlying contact. Call history, notes, callbacks and meetings are preserved — only the integration's link is archived. Re-sending `contact.upserted` with the same `externalId` un-archives it.
+  Ringee never deletes the underlying contact. Call history, notes, callbacks
+  and meetings are preserved — only the integration's link is archived.
+  Re-sending `contact.upserted` with the same `externalId` un-archives it. If no
+  link exists, the delete is a successful no-op.
 </Info>
 
 </Tab>
@@ -106,6 +157,8 @@ Ringee never deletes the underlying contact. Call history, notes, callbacks and 
   "data": { "externalId": "ext_company_7" }
 }
 ```
+
+This archives only the link created by this integration. Historical company relationships remain available in Ringee. If no link exists, the delete is a successful no-op.
 
 </Tab>
 </Tabs>

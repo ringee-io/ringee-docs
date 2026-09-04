@@ -1,0 +1,93 @@
+---
+title: AI Voice Agents from the CLI
+sidebarTitle: CLI
+description: "Run AI voice agent calls from a terminal or shell-capable agent"
+---
+
+The `ringee` CLI wraps the three AI Voice Agent MCP tools and adds a mandatory `--yes` gate before it starts a real call.
+
+## Configure an organization workspace
+
+```bash
+npm i -g ringee
+export RINGEE_MCP_URL="https://api.ringee.io/api/mcp/<userId>/<organizationId>/sse"
+ringee config check
+```
+
+AI Voice Agents fail in a personal workspace. See [CLI configuration](/cli/configuration) if you build the URL from `RINGEE_BACKEND_URL`, `RINGEE_USER_ID` and `RINGEE_ORG_ID` instead.
+
+## List agents
+
+```bash
+ringee voice-agents list
+ringee voice-agents list --json
+```
+
+The readable output includes:
+
+- agent id, type, status, voice and call count;
+- the default caller number, when assigned;
+- accepted variables, with required values marked `*`;
+- eligible caller-number ids for `--from`.
+
+## Start a call
+
+```bash
+ringee voice-agents call <agentId> \
+  --to +13055550123 \
+  --from <numberId> \
+  --var first_name=Carlos \
+  --var reason="Product demo" \
+  --external-id crm-contact-42 \
+  --yes
+```
+
+| Option               |  Required | Meaning                                                         |
+| -------------------- | --------: | --------------------------------------------------------------- |
+| `--to <phone>`       |       Yes | E.164 destination                                               |
+| `--from <numberId>`  | Sometimes | Eligible Ringee number when the agent has no resolvable default |
+| `--var <name=value>` |   By type | Dynamic variable; repeat the flag for several values            |
+| `--external-id <id>` |        No | Stored as `metadata.external_id` and echoed in the result       |
+| `-y, --yes`          |       Yes | Confirms the real, billed call                                  |
+
+Values may contain `=`; the CLI splits each `--var` only at the first one.
+
+<Warning>
+  Without `--yes`, the command exits non-zero and no call is placed. Do not add
+  the flag in an autonomous loop until a human has approved this exact call.
+</Warning>
+
+## Read the result
+
+```bash
+ringee voice-agents call-result <callId>
+ringee voice-agents call-result <callId> --json
+```
+
+The human-readable form prints status, outcome, sentiment, summary and extracted fields. JSON also preserves `metadata` for workflow correlation.
+
+## Script safely
+
+```bash
+result=$(ringee voice-agents call <agentId> \
+  --to +13055550123 \
+  --var first_name=Carlos \
+  --yes \
+  --json)
+
+call_id=$(printf '%s' "$result" | jq -r '.callId')
+ringee voice-agents call-result "$call_id" --json
+```
+
+Do not automatically repeat the start command when its result is ambiguous. A retry can place a second call.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Complete CLI reference" icon="terminal" href="/cli/commands">
+    Every Ringee command and option
+  </Card>
+  <Card title="Calls and results" icon="phone" href="/voice-agents/calls">
+    Status, outcomes, analysis and billing
+  </Card>
+</CardGroup>

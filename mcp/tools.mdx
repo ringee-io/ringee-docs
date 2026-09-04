@@ -1,43 +1,67 @@
 ---
 title: Tool reference
-description: 'Every tool the Ringee MCP server exposes'
+description: "Every tool the Ringee MCP server exposes"
 ---
 
-The Ringee MCP server exposes 19 tools. Each is annotated with MCP trust hints so clients can decide when to ask for confirmation.
+The Ringee MCP server exposes 37 tools. Each is annotated with MCP trust hints so clients can decide when to ask for confirmation.
 
 Trust levels are colour-coded throughout this tab:
 
 <div className="rg-legend">
-  <span className="rg-badge rg-read">Read</span> looks, never changes anything &nbsp;·&nbsp;
-  <span className="rg-badge rg-write">Write</span> creates or updates a record &nbsp;·&nbsp;
-  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints a shareable link &nbsp;·&nbsp;
-  <span className="rg-badge rg-destructive">Destructive</span> removes access or data
+  <span className="rg-badge rg-read">Read</span> looks, never changes anything
+  &nbsp;·&nbsp;
+  <span className="rg-badge rg-write">Write</span> creates or updates a record
+  &nbsp;·&nbsp;
+  <span className="rg-badge rg-sensitive">Sensitive</span> spends money or mints
+  a shareable link &nbsp;·&nbsp;
+  <span className="rg-badge rg-destructive">Destructive</span> removes access or
+  data
 </div>
 
-| Tool | Type | Spends credits |
-|---|---|---|
-| [`list_workspaces`](#list_workspaces) | <span className="rg-badge rg-read">Read</span> | No |
-| [`switch_workspace`](#switch_workspace) | <span className="rg-badge rg-write">Write</span> | No |
-| [`search_contacts`](#search_contacts) | <span className="rg-badge rg-read">Read</span> | No |
-| [`get_contact`](#get_contact) | <span className="rg-badge rg-read">Read</span> | No |
-| [`find_contacts_by_outcome`](#find_contacts_by_outcome) | <span className="rg-badge rg-read">Read</span> | No |
-| [`list_calls`](#list_calls) | <span className="rg-badge rg-read">Read</span> | No |
-| [`create_contact`](#create_contact) | <span className="rg-badge rg-write">Write</span> | No |
-| [`update_contact`](#update_contact) | <span className="rg-badge rg-write">Write</span> | No |
-| [`delete_contact`](#delete_contact) | <span className="rg-badge rg-destructive">Destructive</span> | No |
-| [`log_call_outcome`](#log_call_outcome) | <span className="rg-badge rg-write">Write</span> | No |
-| [`create_callback`](#create_callback) | <span className="rg-badge rg-write">Write</span> | No |
-| [`schedule_meeting`](#schedule_meeting) | <span className="rg-badge rg-write">Write</span> | No |
-| [`create_call_session`](#create_call_session) | <span className="rg-badge rg-sensitive">Sensitive</span> | No |
-| [`get_call_session`](#get_call_session) | <span className="rg-badge rg-read">Read</span> | No |
-| [`update_call_session`](#update_call_session) | <span className="rg-badge rg-write">Write</span> | No |
-| [`delete_call_session`](#delete_call_session) | <span className="rg-badge rg-destructive">Destructive</span> | No |
-| [`search_leads`](#search_leads) | <span className="rg-badge rg-read">Read</span> | Provider only |
-| [`reveal_lead`](#reveal_lead) | <span className="rg-badge rg-sensitive">Sensitive</span> | Provider only |
-| [`import_leads_as_contacts`](#import_leads_as_contacts) | <span className="rg-badge rg-write">Write</span> | No |
+| Tool                                                      | Type                                                         | Spends credits    |
+| --------------------------------------------------------- | ------------------------------------------------------------ | ----------------- |
+| [`list_workspaces`](#list_workspaces)                     | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`switch_workspace`](#switch_workspace)                   | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`search_contacts`](#search_contacts)                     | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`get_contact`](#get_contact)                             | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`find_contacts_by_outcome`](#find_contacts_by_outcome)   | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`list_calls`](#list_calls)                               | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`create_contact`](#create_contact)                       | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`update_contact`](#update_contact)                       | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`delete_contact`](#delete_contact)                       | <span className="rg-badge rg-destructive">Destructive</span> | No                |
+| [`log_call_outcome`](#log_call_outcome)                   | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`create_callback`](#create_callback)                     | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`schedule_meeting`](#schedule_meeting)                   | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`create_call_session`](#create_call_session)             | <span className="rg-badge rg-sensitive">Sensitive</span>     | No                |
+| [`get_call_session`](#get_call_session)                   | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`update_call_session`](#update_call_session)             | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`delete_call_session`](#delete_call_session)             | <span className="rg-badge rg-destructive">Destructive</span> | No                |
+| [`search_leads`](#search_leads)                           | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`reveal_lead`](#reveal_lead)                             | <span className="rg-badge rg-sensitive">Sensitive</span>     | Provider only     |
+| [`import_leads_as_contacts`](#import_leads_as_contacts)   | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`list_campaigns`](#list_campaigns)                       | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`get_campaign`](#get_campaign)                           | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`update_campaign_status`](#update_campaign_status)       | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`list_campaign_leads`](#list_campaign_leads)             | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`add_campaign_leads`](#add_campaign_leads)               | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`delete_campaign_lead`](#delete_campaign_lead)           | <span className="rg-badge rg-destructive">Destructive</span> | No                |
+| [`get_campaign_analytics`](#get_campaign_analytics)       | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`get_call_analytics`](#get_call_analytics)               | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`get_day_activity`](#get_day_activity)                   | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`list_callbacks`](#list_callbacks)                       | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`list_dnc`](#list_dnc)                                   | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`add_to_dnc`](#add_to_dnc)                               | <span className="rg-badge rg-write">Write</span>             | No                |
+| [`remove_from_dnc`](#remove_from_dnc)                     | <span className="rg-badge rg-destructive">Destructive</span> | No                |
+| [`list_ai_pipelines`](#list_ai_pipelines)                 | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`get_ai_pipeline_results`](#get_ai_pipeline_results)     | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`list_ai_voice_agents`](#list_ai_voice_agents)           | <span className="rg-badge rg-read">Read</span>               | No                |
+| [`start_ai_voice_agent_call`](#start_ai_voice_agent_call) | <span className="rg-badge rg-sensitive">Sensitive</span>     | Ringee + provider |
+| [`get_ai_voice_agent_call`](#get_ai_voice_agent_call)     | <span className="rg-badge rg-read">Read</span>               | No                |
 
 <Note>
-No MCP tool ever debits Ringee calling credits. `search_leads` and `reveal_lead` consume the allowance of your connected enrichment provider (Apollo or Prospeo).
+  `start_ai_voice_agent_call` places a real phone call and debits Ringee credits
+  when usage settles. `reveal_lead` uses the allowance of the connected
+  enrichment provider instead; `search_leads` does not spend credits.
 </Note>
 
 ## Conventions
@@ -62,7 +86,8 @@ Takes no parameters.
 Changes the active workspace for every subsequent action. No re-authentication needed.
 
 <ParamField body="workspaceId" type="string" required>
-  `personal` for the user's own account, or an organization id from `list_workspaces`. An exact organization name also works.
+  `personal` for the user's own account, or an organization id from
+  `list_workspaces`. An exact organization name also works.
 </ParamField>
 
 See [Workspaces](/mcp/workspaces) for how scoping behaves.
@@ -78,8 +103,12 @@ Searches the directory by name, phone, email, company, job title, state, website
 <ParamField body="query" type="string" required>
   Search text. Pass `*` to list **all** contacts, paginated.
 </ParamField>
-<ParamField body="page" type="number">1-based page number.</ParamField>
-<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
 
 Use this to resolve a `contactId` before any tool that needs one.
 
@@ -87,50 +116,88 @@ Use this to resolve a `contactId` before any tool that needs one.
 
 Fetches one contact in full, including recent calls, notes, meetings and tags.
 
-<ParamField body="contactId" type="string (uuid)" required>The contact to fetch.</ParamField>
+<ParamField body="contactId" type="string (uuid)" required>
+  The contact to fetch.
+</ParamField>
 
 ### `find_contacts_by_outcome`
 
 Finds contacts whose calls reached given outcomes — who converted, showed interest or booked a meeting. Useful for deriving a real ICP from closed business.
 
 <ParamField body="outcomes" type="string[]" required>
-  One or more of `meeting_booked`, `sale`, `interested`, `follow_up`, `callback_scheduled`, `not_interested`, `no_answer`, `voicemail`, `wrong_number`, `gatekeeper`.
+  One or more of `meeting_booked`, `sale`, `interested`, `follow_up`,
+  `callback_scheduled`, `not_interested`, `no_answer`, `voicemail`,
+  `wrong_number`, `gatekeeper`.
 </ParamField>
 <ParamField body="match" type="string">
-  `any` (default) matches a contact with **any** call in those outcomes. `last` considers only the most recent call.
+  `any` (default) matches a contact with **any** call in those outcomes. `last`
+  considers only the most recent call.
 </ParamField>
 <ParamField body="includeUnreachable" type="boolean">
   Include contacts flagged `doNotCall` or `unsubscribed`. Defaults to `false`.
 </ParamField>
-<ParamField body="page" type="number">1-based page number.</ParamField>
-<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
 
 Returns ICP-relevant fields — company, job title, seniority, department, country, score, lifecycle stage — plus `lastOutcome` and `lastCallAt`.
 
 ### `create_contact`
 
 <ParamField body="phoneNumber" type="string" required>
-  E.164. Must be unique within the workspace — the tool fails fast on a duplicate.
+  E.164. Must be unique within the workspace — the tool fails fast on a
+  duplicate.
 </ParamField>
-<ParamField body="name" type="string">Display name.</ParamField>
-<ParamField body="firstName" type="string">Given name.</ParamField>
-<ParamField body="lastName" type="string">Family name.</ParamField>
-<ParamField body="email" type="string">Primary email.</ParamField>
-<ParamField body="jobTitle" type="string">Role at the company.</ParamField>
-<ParamField body="organization" type="string">Company name.</ParamField>
-<ParamField body="state" type="string">State or region.</ParamField>
-<ParamField body="website" type="string">Company website.</ParamField>
-<ParamField body="revenue" type="string">Company revenue or range.</ParamField>
-<ParamField body="companySize" type="string">Headcount band.</ParamField>
-<ParamField body="source" type="string">Lead source label. Defaults to `mcp`.</ParamField>
-<ParamField body="note" type="string">Initial note.</ParamField>
-<ParamField body="tagIds" type="string[]">Tag UUIDs to assign.</ParamField>
+<ParamField body="name" type="string">
+  Display name.
+</ParamField>
+<ParamField body="firstName" type="string">
+  Given name.
+</ParamField>
+<ParamField body="lastName" type="string">
+  Family name.
+</ParamField>
+<ParamField body="email" type="string">
+  Primary email.
+</ParamField>
+<ParamField body="jobTitle" type="string">
+  Role at the company.
+</ParamField>
+<ParamField body="organization" type="string">
+  Company name.
+</ParamField>
+<ParamField body="state" type="string">
+  State or region.
+</ParamField>
+<ParamField body="website" type="string">
+  Company website.
+</ParamField>
+<ParamField body="revenue" type="string">
+  Company revenue or range.
+</ParamField>
+<ParamField body="companySize" type="string">
+  Headcount band.
+</ParamField>
+<ParamField body="source" type="string">
+  Lead source label. Defaults to `mcp`.
+</ParamField>
+<ParamField body="note" type="string">
+  Initial note.
+</ParamField>
+<ParamField body="tagIds" type="string[]">
+  Tag UUIDs to assign.
+</ParamField>
 
 ### `update_contact`
 
 Patches an existing contact. Only the fields you send change.
 
-<ParamField body="contactId" type="string (uuid)" required>The contact to update.</ParamField>
+<ParamField body="contactId" type="string (uuid)" required>
+  The contact to update.
+</ParamField>
 <ParamField body="tagIds" type="string[]">
   **Replaces** the contact's tag set. Omit it to leave tags untouched.
 </ParamField>
@@ -143,14 +210,20 @@ All other fields match `create_contact`. Ownership is verified before writing.
 
 Soft-deletes a contact by setting `deletedAt`.
 
-<ParamField body="contactId" type="string (uuid)" required>The contact to delete.</ParamField>
-<ParamField body="confirm" type="boolean" required>Must be the literal `true`.</ParamField>
+<ParamField body="contactId" type="string (uuid)" required>
+  The contact to delete.
+</ParamField>
+<ParamField body="confirm" type="boolean" required>
+  Must be the literal `true`.
+</ParamField>
 <ParamField body="confirmPhoneNumber" type="string" required>
   Must exactly match the contact's stored phone number in E.164.
 </ParamField>
 
 <Warning>
-Destructive and double-guarded. Fetch the contact with `get_contact` first, read the phone number back to the user, and get an explicit "yes, delete" before calling. Assistants must never auto-confirm.
+  Destructive and double-guarded. Fetch the contact with `get_contact` first,
+  read the phone number back to the user, and get an explicit "yes, delete"
+  before calling. Assistants must never auto-confirm.
 </Warning>
 
 ---
@@ -161,15 +234,28 @@ Destructive and double-guarded. Fetch the contact with `get_contact` first, read
 
 Returns calls in full detail: direction, status, timing, duration, logged outcome and note, plus the transcription and recording URL when present. Newest first. Cost and low-level telephony fields are intentionally excluded.
 
-<ParamField body="contactId" type="string (uuid)">Filter to one contact's calls.</ParamField>
-<ParamField body="outcome" type="string[]">Only calls with one of these outcomes.</ParamField>
-<ParamField body="status" type="string[]">
-  Only calls in these states: `pending`, `ringing`, `answered`, `recording`, `completed`, `failed`.
+<ParamField body="contactId" type="string (uuid)">
+  Filter to one contact's calls.
 </ParamField>
-<ParamField body="dateFrom" type="string (ISO-8601)">Only calls created at or after this.</ParamField>
-<ParamField body="dateTo" type="string (ISO-8601)">Only calls created at or before this.</ParamField>
-<ParamField body="page" type="number">1-based page number.</ParamField>
-<ParamField body="limit" type="number">Page size, max 50.</ParamField>
+<ParamField body="outcome" type="string[]">
+  Only calls with one of these outcomes.
+</ParamField>
+<ParamField body="status" type="string[]">
+  Only calls in these states: `pending`, `ringing`, `answered`, `recording`,
+  `completed`, `failed`.
+</ParamField>
+<ParamField body="dateFrom" type="string (ISO-8601)">
+  Only calls created at or after this.
+</ParamField>
+<ParamField body="dateTo" type="string (ISO-8601)">
+  Only calls created at or before this.
+</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
 
 ### `log_call_outcome`
 
@@ -181,33 +267,62 @@ Records how a past call went.
 <ParamField body="outcome" type="string" required>
   One of the `CallOutcome` values listed under `find_contacts_by_outcome`.
 </ParamField>
-<ParamField body="outcomeNote" type="string">Free-text note.</ParamField>
+<ParamField body="outcomeNote" type="string">
+  Free-text note.
+</ParamField>
 
 ### `create_callback`
 
 Schedules a reminder to call a contact back. Creates a callback task and a reminder.
 
-<ParamField body="contactId" type="string (uuid)" required>Who to call back.</ParamField>
-<ParamField body="scheduledAt" type="string (ISO-8601)" required>Future datetime with offset.</ParamField>
-<ParamField body="callId" type="string (uuid)">Originating call.</ParamField>
-<ParamField body="note" type="string">Free-text note.</ParamField>
+<ParamField body="contactId" type="string (uuid)" required>
+  Who to call back.
+</ParamField>
+<ParamField body="scheduledAt" type="string (ISO-8601)" required>
+  Future datetime with offset.
+</ParamField>
+<ParamField body="callId" type="string (uuid)">
+  Originating call.
+</ParamField>
+<ParamField body="note" type="string">
+  Free-text note.
+</ParamField>
 
 ### `schedule_meeting`
 
 Books a meeting. When the user has a Google or Microsoft calendar connected, the event is synced and a Meet or Teams link is generated.
 
-<ParamField body="contactId" type="string (uuid)" required>Who the meeting is with.</ParamField>
-<ParamField body="scheduledAt" type="string (ISO-8601)" required>Start time with offset.</ParamField>
-<ParamField body="title" type="string">Meeting title.</ParamField>
-<ParamField body="duration" type="number">Minutes. Defaults to 30.</ParamField>
-<ParamField body="location" type="string">Address or video URL.</ParamField>
-<ParamField body="notes" type="string">Notes.</ParamField>
-<ParamField body="attendeeEmail" type="string">Sends a calendar invite to this address.</ParamField>
-<ParamField body="calendarProvider" type="string">Calendar to sync with.</ParamField>
-<ParamField body="callId" type="string (uuid)">Originating call.</ParamField>
+<ParamField body="contactId" type="string (uuid)" required>
+  Who the meeting is with.
+</ParamField>
+<ParamField body="scheduledAt" type="string (ISO-8601)" required>
+  Start time with offset.
+</ParamField>
+<ParamField body="title" type="string">
+  Meeting title.
+</ParamField>
+<ParamField body="duration" type="number">
+  Minutes. Defaults to 30.
+</ParamField>
+<ParamField body="location" type="string">
+  Address or video URL.
+</ParamField>
+<ParamField body="notes" type="string">
+  Notes.
+</ParamField>
+<ParamField body="attendeeEmail" type="string">
+  Sends a calendar invite to this address.
+</ParamField>
+<ParamField body="calendarProvider" type="string">
+  Calendar to sync with.
+</ParamField>
+<ParamField body="callId" type="string (uuid)">
+  Originating call.
+</ParamField>
 
 <Info>
-This tool reaches an external system (calendar sync and email invites), so it is flagged `openWorldHint`.
+  This tool reaches an external system (calendar sync and email invites), so it
+  is flagged `openWorldHint`.
 </Info>
 
 ---
@@ -221,34 +336,61 @@ A **call session** is a queue of contacts plus a magic link that lets someone di
 <span className="rg-badge rg-sensitive">Sensitive</span>
 
 <ParamField body="contacts" type="object[]" required>
-  Ordered queue, 1 to 500 entries. Each accepts `contactId` and/or `phoneNumber` (E.164, required when `contactId` is absent), plus optional `name`, `company`, `jobTitle`, `state`, `website`, `revenue`, `companySize`. Provide `contactId` when you have it — name and phone are then looked up server-side.
+  Ordered queue, 1 to 500 entries. Each accepts `contactId` and/or `phoneNumber`
+  (E.164, required when `contactId` is absent), plus optional `name`, `company`,
+  `jobTitle`, `state`, `website`, `revenue`, `companySize`. Provide `contactId`
+  when you have it — name and phone are then looked up server-side.
 </ParamField>
-<ParamField body="title" type="string">Session title, visible to the magic-link recipient.</ParamField>
-<ParamField body="campaignId" type="string (uuid)">Attribute calls to a campaign.</ParamField>
-<ParamField body="expiresInMinutes" type="number">Link lifetime. Defaults to 60 minutes, max 30 days.</ParamField>
-<ParamField body="maxCalls" type="number">Auto-complete the session after N calls, max 500.</ParamField>
-<ParamField body="metadata" type="object">Free-form JSON persisted with the session; not exposed to the magic-link UI.</ParamField>
+<ParamField body="title" type="string">
+  Session title, visible to the magic-link recipient.
+</ParamField>
+<ParamField body="campaignId" type="string (uuid)">
+  Attribute calls to a campaign.
+</ParamField>
+<ParamField body="expiresInMinutes" type="number">
+  Link lifetime. Defaults to 60 minutes, max 30 days.
+</ParamField>
+<ParamField body="maxCalls" type="number">
+  Auto-complete the session after N calls, max 500.
+</ParamField>
+<ParamField body="metadata" type="object">
+  Free-form JSON persisted with the session; not exposed to the magic-link UI.
+</ParamField>
 
 <Warning>
-Returns a `joinUrl` containing a magic-link token. The token is shown **once** and cannot be re-fetched. Share the URL exactly as returned, and only with someone authorized to call on the workspace's behalf.
+  Returns a `joinUrl` containing a magic-link token. The token is shown **once**
+  and cannot be re-fetched. Share the URL exactly as returned, and only with
+  someone authorized to call on the workspace's behalf.
 </Warning>
 
 ### `get_call_session`
 
 Returns safe metadata — status, contact count, calls completed, expiry, and whether a token is still active. It never exposes the raw magic link.
 
-<ParamField body="callSessionId" type="string (uuid)" required>The session to inspect.</ParamField>
+<ParamField body="callSessionId" type="string (uuid)" required>
+  The session to inspect.
+</ParamField>
 
 ### `update_call_session`
 
-<ParamField body="callSessionId" type="string (uuid)" required>The session to update.</ParamField>
-<ParamField body="title" type="string">New title.</ParamField>
-<ParamField body="campaignId" type="string (uuid) | null">Set a campaign, or `null` to detach.</ParamField>
-<ParamField body="expiresInMinutes" type="number">Extend validity.</ParamField>
+<ParamField body="callSessionId" type="string (uuid)" required>
+  The session to update.
+</ParamField>
+<ParamField body="title" type="string">
+  New title.
+</ParamField>
+<ParamField body="campaignId" type="string (uuid) | null">
+  Set a campaign, or `null` to detach.
+</ParamField>
+<ParamField body="expiresInMinutes" type="number">
+  Extend validity.
+</ParamField>
 <ParamField body="contacts" type="object[]">
   Replaces the queue. Only allowed **before the first call** has started.
 </ParamField>
-<ParamField body="metadata" type="object">Replace metadata.</ParamField>
+<ParamField body="metadata" type="object">
+  Replace metadata.
+</ParamField>
 
 ### `delete_call_session`
 
@@ -256,10 +398,13 @@ Returns safe metadata — status, contact count, calls completed, expiry, and wh
 
 Revokes the session. Past calls are preserved, but every active magic link stops working immediately.
 
-<ParamField body="callSessionId" type="string (uuid)" required>The session to revoke.</ParamField>
+<ParamField body="callSessionId" type="string (uuid)" required>
+  The session to revoke.
+</ParamField>
 
 <Warning>
-Flagged destructive — the link cannot be restored. Issue a new session instead.
+  Flagged destructive — the link cannot be restored. Issue a new session
+  instead.
 </Warning>
 
 ---
@@ -272,58 +417,416 @@ These tools use the workspace's connected enrichment provider. Apollo is preferr
 
 Searches for candidates. Results are **not** contacts yet.
 
-<ParamField body="provider" type="string">`apollo` or `prospeo`. Auto-selected when omitted.</ParamField>
-<ParamField body="keywords" type="string">Free-text keywords.</ParamField>
-<ParamField body="jobTitles" type="string[]">Job titles to include.</ParamField>
-<ParamField body="jobTitlesExclude" type="string[]">Job titles to exclude.</ParamField>
-<ParamField body="seniorities" type="string[]">Seniority levels.</ParamField>
-<ParamField body="departments" type="string[]">Departments.</ParamField>
-<ParamField body="personCountries" type="string[]">Countries.</ParamField>
-<ParamField body="personCities" type="string[]">Cities.</ParamField>
-<ParamField body="industries" type="string[]">Industries.</ParamField>
-<ParamField body="companyNames" type="string[]">Company names.</ParamField>
-<ParamField body="companyDomains" type="string[]">Company domains.</ParamField>
-<ParamField body="employeeCountRanges" type="string[]">Headcount bands.</ParamField>
-<ParamField body="technologies" type="string[]">Technologies in use.</ParamField>
-<ParamField body="hasEmail" type="boolean">Only candidates with an email.</ParamField>
-<ParamField body="hasPhone" type="boolean">Only candidates with a phone.</ParamField>
-<ParamField body="emailVerified" type="boolean">Only verified emails.</ParamField>
-<ParamField body="page" type="number">Page number.</ParamField>
-<ParamField body="perPage" type="number">Results per page, max 25.</ParamField>
+<ParamField body="provider" type="string">
+  `apollo` or `prospeo`. Auto-selected when omitted.
+</ParamField>
+<ParamField body="keywords" type="string">
+  Free-text keywords.
+</ParamField>
+<ParamField body="jobTitles" type="string[]">
+  Job titles to include.
+</ParamField>
+<ParamField body="jobTitlesExclude" type="string[]">
+  Job titles to exclude.
+</ParamField>
+<ParamField body="seniorities" type="string[]">
+  Seniority levels.
+</ParamField>
+<ParamField body="departments" type="string[]">
+  Departments.
+</ParamField>
+<ParamField body="personCountries" type="string[]">
+  Countries.
+</ParamField>
+<ParamField body="personCities" type="string[]">
+  Cities.
+</ParamField>
+<ParamField body="industries" type="string[]">
+  Industries.
+</ParamField>
+<ParamField body="companyNames" type="string[]">
+  Company names.
+</ParamField>
+<ParamField body="companyDomains" type="string[]">
+  Company domains.
+</ParamField>
+<ParamField body="employeeCountRanges" type="string[]">
+  Headcount bands.
+</ParamField>
+<ParamField body="technologies" type="string[]">
+  Technologies in use.
+</ParamField>
+<ParamField body="hasEmail" type="boolean">
+  Only candidates with an email.
+</ParamField>
+<ParamField body="hasPhone" type="boolean">
+  Only candidates with a phone.
+</ParamField>
+<ParamField body="emailVerified" type="boolean">
+  Only verified emails.
+</ParamField>
+<ParamField body="page" type="number">
+  Page number.
+</ParamField>
+<ParamField body="perPage" type="number">
+  Results per page, max 25.
+</ParamField>
 
 Returns a `jobId` plus candidates with `externalId`, person and company summaries, and whether emails and phones are available. Pass the `jobId` to the two tools below.
 
 ### `reveal_lead`
 
-<span className="rg-badge rg-sensitive">Sensitive</span> <span className="rg-badge rg-neutral">Spends provider credits</span>
+<span className="rg-badge rg-sensitive">Sensitive</span>
+<span className="rg-badge rg-neutral">Spends provider credits</span>
 
 Reveals a candidate's email — and optionally a mobile phone — and upserts a Ringee contact so the lead is immediately callable.
 
-<ParamField body="jobId" type="string (uuid)" required>From `search_leads`.</ParamField>
-<ParamField body="externalId" type="string" required>The candidate to reveal.</ParamField>
-<ParamField body="revealPhone" type="boolean">Also reveal a mobile phone. Costs extra provider credits.</ParamField>
+<ParamField body="jobId" type="string (uuid)" required>
+  From `search_leads`.
+</ParamField>
+<ParamField body="externalId" type="string" required>
+  The candidate to reveal.
+</ParamField>
+<ParamField body="revealPhone" type="boolean">
+  Also reveal a mobile phone. Costs extra provider credits.
+</ParamField>
 
 <Warning>
-Spends the enrichment provider's credits every time and is **not** idempotent. Call it only after the user explicitly picks that lead.
+  Spends the enrichment provider's credits every time and is **not** idempotent.
+  Call it only after the user explicitly picks that lead.
 </Warning>
 
 ### `import_leads_as_contacts`
 
 Bulk-imports candidates from a search job as Ringee contacts, deduplicated by phone number. Does **not** reveal hidden emails or phones — use `reveal_lead` first if you need those.
 
-<ParamField body="jobId" type="string (uuid)" required>From `search_leads`.</ParamField>
-<ParamField body="externalIds" type="string[]" required>Candidates to import.</ParamField>
-<ParamField body="tagIds" type="string[]">Tags to assign to every imported contact.</ParamField>
+<ParamField body="jobId" type="string (uuid)" required>
+  From `search_leads`.
+</ParamField>
+<ParamField body="externalIds" type="string[]" required>
+  Candidates to import.
+</ParamField>
+<ParamField body="tagIds" type="string[]">
+  Tags to assign to every imported contact.
+</ParamField>
 
 Returns counts, duplicates, errors and the new contact ids.
 
 ---
 
+## Campaigns
+
+Campaign tools require an organization workspace. Organization members can read campaigns they are assigned to. Status changes and lead mutations require an organization admin.
+
+### `list_campaigns`
+
+Lists campaign ids, names, statuses and lead counts.
+
+<ParamField body="search" type="string">
+  Filter name and description.
+</ParamField>
+<ParamField body="status" type="string">
+  `draft`, `active`, `paused` or `completed`.
+</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
+
+### `get_campaign`
+
+Returns one campaign's status, dialer mode, working hours, timezone, retry limits, wrap-up settings and lead count.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  Resolve with `list_campaigns`.
+</ParamField>
+
+### `update_campaign_status`
+
+Changes a campaign's lifecycle state. Allowed transitions are `draft → active`, `active → paused|completed` and `paused → active|completed`. `completed` is terminal.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  The campaign to change.
+</ParamField>
+<ParamField body="status" type="string" required>
+  The new lifecycle state.
+</ParamField>
+
+Activation requires at least one lead, at least one disposition and a usable outbound number.
+
+### `list_campaign_leads`
+
+Returns each CampaignLead id, status, attempts, last and next call time, and the linked contact.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  The campaign to inspect.
+</ParamField>
+<ParamField body="status" type="string">
+  `pending`, `queued`, `locked`, `dialing`, `in_call`, `wrap_up`,
+  `dispositioned`, `scheduled`, `completed`, `exhausted`, `dnc`, or the
+  aggregate aliases `called` and `dead`.
+</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
+
+### `add_campaign_leads`
+
+Adds 1 to 200 leads. Ringee creates or reuses contacts by phone number and skips contacts already in the campaign.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  The target campaign.
+</ParamField>
+<ParamField body="leads" type="object[]" required>
+  Each entry requires `name` and E.164 `phone`. Optional fields are `email`,
+  `company`, `jobTitle`, `state`, `website`, `revenue` and `companySize`.
+</ParamField>
+
+### `delete_campaign_lead`
+
+<span className="rg-badge rg-destructive">Destructive</span>
+
+Removes one lead from a campaign. Its campaign attempts and callbacks are deleted; the Contact and its general call history remain. A lead currently locked, dialing, in a call or wrapping up cannot be removed.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  The campaign.
+</ParamField>
+<ParamField body="leadId" type="string (uuid)" required>
+  The CampaignLead id from `list_campaign_leads`, not the contact id.
+</ParamField>
+<ParamField body="confirm" type="boolean" required>
+  Must be literal `true` after explicit user approval.
+</ParamField>
+
+### `get_campaign_analytics`
+
+Returns attempts, connects, conversions, contact and conversion rates, average handle time, leads by status and disposition distribution.
+
+<ParamField body="campaignId" type="string (uuid)" required>
+  The campaign.
+</ParamField>
+<ParamField body="startDate" type="string (ISO-8601)">
+  Window start. Pair with `endDate`.
+</ParamField>
+<ParamField body="endDate" type="string (ISO-8601)">
+  Window end. Pair with `startDate`.
+</ParamField>
+<ParamField body="includeAgents" type="boolean">
+  Include per-agent performance. Defaults to `true`.
+</ParamField>
+<ParamField body="includeHourly" type="boolean">
+  Include the hourly histogram. Defaults to `false`.
+</ParamField>
+
+Rates are already percentages from 0 to 100.
+
+---
+
+## Analytics and activity
+
+### `get_call_analytics`
+
+Returns the numbers behind the dashboard overview: call volume, answer rate, outcomes, conversions, meetings, average duration and an outcome funnel.
+
+<ParamField body="range" type="string">
+  `today`, `yesterday`, `7d`, `30d`, `this_month` or `last_month`.
+</ParamField>
+<ParamField body="from" type="string (ISO-8601)">
+  Custom start. Pair with `to`.
+</ParamField>
+<ParamField body="to" type="string (ISO-8601)">
+  Custom end. Pair with `from`.
+</ParamField>
+<ParamField body="campaignId" type="string">
+  Campaign UUID, or literal `none` for calls outside every campaign.
+</ParamField>
+<ParamField body="outcome" type="string">
+  Restrict every metric to one call outcome.
+</ParamField>
+<ParamField body="scope" type="string">
+  `personal` or `organization`.
+</ParamField>
+<ParamField body="memberUserId" type="string (uuid)">
+  Narrow organization results to one member; admin only.
+</ParamField>
+<ParamField body="include" type="string[]">
+  Any of `kpis`, `funnel`, `by-outcome`, `over-time`, `best-time-of-day`,
+  `agents`. Defaults to the first three.
+</ParamField>
+
+### `get_day_activity`
+
+Returns calls, callbacks and meetings for one calendar day.
+
+<ParamField body="date" type="string" required>
+  Calendar date as `YYYY-MM-DD`.
+</ParamField>
+<ParamField body="utcOffset" type="string">
+  Offset such as `-04:00`. Defaults to UTC.
+</ParamField>
+<ParamField body="campaignId" type="string">
+  Campaign UUID, or `none` for calls outside campaigns.
+</ParamField>
+<ParamField body="outcome" type="string[]">
+  Only calls with these outcomes.
+</ParamField>
+<ParamField body="includeCallbacks" type="boolean">
+  Defaults to `true`.
+</ParamField>
+<ParamField body="includeMeetings" type="boolean">
+  Defaults to `true`.
+</ParamField>
+<ParamField body="limit" type="number">
+  Maximum calls, default 50 and max 100.
+</ParamField>
+
+Always send the user's offset when “today” or “yesterday” must mean their local day.
+
+### `list_callbacks`
+
+Lists callbacks soonest first, including their contact and originating campaign.
+
+<ParamField body="status" type="string">
+  `scheduled`, `due`, `in_progress`, `completed`, `missed` or `cancelled`.
+</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
+
+---
+
+## Do Not Call
+
+### `list_dnc`
+
+Lists suppressed numbers with their reason, source and creation time.
+
+<ParamField body="search" type="string">
+  Phone-number fragment.
+</ParamField>
+<ParamField body="page" type="number">
+  1-based page number.
+</ParamField>
+<ParamField body="limit" type="number">
+  Page size, max 50.
+</ParamField>
+
+### `add_to_dnc`
+
+Suppresses one or more numbers. Every future dial to them from this workspace is blocked. Existing entries are reported as duplicates.
+
+<ParamField body="phoneNumbers" type="string[]" required>
+  1 to 500 E.164 numbers.
+</ParamField>
+<ParamField body="reason" type="string">
+  Why they were suppressed, max 500 characters.
+</ParamField>
+
+### `remove_from_dnc`
+
+<span className="rg-badge rg-destructive">Destructive</span>
+
+Releases a number so it becomes callable again.
+
+<ParamField body="phoneNumber" type="string" required>
+  E.164 number verified with `list_dnc`.
+</ParamField>
+<ParamField body="confirm" type="boolean" required>
+  Must be literal `true` after the user explicitly requests removal.
+</ParamField>
+
+---
+
+## AI pipelines
+
+These read-only tools expose pipeline state and results. They require an organization admin, except a valid personal context for a freelancer.
+
+### `list_ai_pipelines`
+
+Lists `follow_up_recommendations`, `script_optimization` and `objection_intelligence`, including enabled contexts, pending actions and newly eligible calls. Takes no parameters.
+
+### `get_ai_pipeline_results`
+
+<ParamField body="pipeline" type="string" required>
+  Pipeline type returned by `list_ai_pipelines`.
+</ParamField>
+<ParamField body="contextType" type="string" required>
+  `campaign`, `organization_outside_campaign` or `personal`.
+</ParamField>
+<ParamField body="campaignId" type="string (uuid)">
+  Required for a campaign context.
+</ParamField>
+<ParamField body="status" type="string">
+  `pending`, `completed`, `dismissed` or `snoozed`. Defaults to `pending`.
+</ParamField>
+
+Returns context activation, last run, confidence, recommended actions and—when applicable—ranked objections with recommended responses and trend data.
+
+---
+
+## AI Voice Agents
+
+These tools require an organization workspace. See the focused [AI Voice Agents MCP guide](/voice-agents/mcp) for the complete flow.
+
+### `list_ai_voice_agents`
+
+Lists agents, caller numbers and accepted variables by type.
+
+<ParamField body="limit" type="number">
+  Defaults to 20, max 100.
+</ParamField>
+
+### `start_ai_voice_agent_call`
+
+<span className="rg-badge rg-sensitive">Sensitive</span>
+<span className="rg-badge rg-neutral">Real billed call</span>
+
+Starts a server-originated AI conversation and returns immediately with a call id.
+
+<ParamField body="agentId" type="string (uuid)" required>
+  Resolve with `list_ai_voice_agents`.
+</ParamField>
+<ParamField body="to" type="string" required>
+  E.164 destination.
+</ParamField>
+<ParamField body="fromNumberId" type="string (uuid)">
+  Eligible caller number when no default can be resolved.
+</ParamField>
+<ParamField body="variables" type="object">
+  String values accepted by the agent type.
+</ParamField>
+<ParamField body="metadata" type="object">
+  Free-form values echoed in the result.
+</ParamField>
+
+<Warning>
+  This is non-idempotent. Confirm the exact call with the user and do not retry
+  it blindly.
+</Warning>
+
+### `get_ai_voice_agent_call`
+
+Returns status, outcome, summary, sentiment, extracted data and metadata for one AI voice agent call.
+
+<ParamField body="callId" type="string (uuid)" required>
+  From `start_ai_voice_agent_call`.
+</ParamField>
+
+---
+
 ## Placing calls
 
-There is no tool that dials a number. Calls are placed in the user's browser or mobile app over WebRTC, so an assistant cannot start one server-side.
+Human-operated Ringee calls are placed in the user's browser or mobile app over WebRTC. There is no MCP tool that remotely presses the human dialer.
 
-To get someone dialing from a chat, use `create_call_session` and share the `joinUrl`.
+Use `create_call_session` and share the `joinUrl` when a person should dial. Use `start_ai_voice_agent_call` only when the user explicitly wants a configured AI Voice Agent to place and conduct the call.
 
 ## Next steps
 
