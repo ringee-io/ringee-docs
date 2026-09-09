@@ -34,9 +34,9 @@ CRM synchronization is bidirectional and event-based. AI Voice Agent execution u
 | List configured AI Voice Agents              | App → Ringee | `GET /api/v1/ai-voice-agents`                 |
 | Start an autonomous AI voice call            | App → Ringee | `POST /api/v1/ai-voice-agents/:id/calls`      |
 | Read AI voice call results                   | App → Ringee | `GET /api/v1/ai-voice-agents/calls/:callId`   |
-| Receive completed, missed and failed calls   | Ringee → CRM | Your webhook URL                              |
-| Receive outcomes, notes, callbacks, meetings | Ringee → CRM | Your webhook URL                              |
-| Receive recordings and Do Not Call entries   | Ringee → CRM | Your webhook URL                              |
+| Receive completed, missed and failed calls   | Ringee → App | Your webhook URL                              |
+| Receive outcomes, notes, callbacks, meetings | Ringee → App | Your webhook URL                              |
+| Receive recordings and Do Not Call entries   | Ringee → App | Your webhook URL                              |
 
 ## How it works
 
@@ -72,7 +72,7 @@ Every event in both directions shares the same envelope:
 }
 ```
 
-Outbound events (Ringee → CRM) add two fields:
+Outbound events (Ringee → your application) add two fields:
 
 ```json
 {
@@ -80,6 +80,25 @@ Outbound events (Ringee → CRM) add two fields:
   "integrationId": "ci_..."
 }
 ```
+
+They can also add shared source fields under `data`:
+
+```json
+{
+  "user": {
+    "id": "usr_…",
+    "email": "ada@babbage.example.com",
+    "fullName": "Ada Lovelace"
+  },
+  "agent": { "id": "va_…", "name": "Sofia" },
+  "externalId": "crm-contact-42"
+}
+```
+
+`data.user` identifies the Ringee user the event belongs to. `data.agent` is
+present when an AI Voice Agent produced the event. If you start that call with
+`metadata.external_id` or `metadata.externalId`, Ringee copies it to
+`data.externalId` on every related outbound event.
 
 <Note>
   `eventId` must identify one logical event and remain stable across transport
@@ -130,6 +149,8 @@ All endpoints in this section are relative to that base URL and live under the g
 
 - Ringee considers an outbound delivery failed if your endpoint does not respond within **15 seconds** or returns a non-2xx status.
 - Failed deliveries are retried up to **10 times** with exponential backoff, capped at **5 minutes** between attempts.
+- Outbound deliveries are independent and can arrive out of order. Use
+  `eventId` for idempotency and `data.callId` for call-level correlation.
 - Event payloads can gain optional fields over time. Ignore unknown keys and validate the fields your integration actually needs.
 - Ringee currently emits **terminal** call events only. There are no `call.started`, `call.ringing` or `call.answered` events — do not build a real-time incoming-call screen on top of this API.
 

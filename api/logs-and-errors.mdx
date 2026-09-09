@@ -114,7 +114,18 @@ That is intentional. `null`, `undefined` and empty strings never overwrite exist
 
 <Accordion title="Your endpoint receives the same event twice">
 
-Expected. Retries and redeliveries reuse the `eventId`. Deduplicate on it with a `UNIQUE` constraint — see [Outbound webhooks](/api/outbound-webhooks#idempotency).
+Expected. Transport retries reuse the `eventId`. Deduplicate on it with a
+`UNIQUE` constraint — see [Outbound
+webhooks](/api/outbound-webhooks#idempotency).
+
+</Accordion>
+
+<Accordion title="An AI Voice Agent event is not linked to your record">
+
+Send your record id as `metadata.external_id` or `metadata.externalId` when you
+start the call. Ringee exposes it as `data.externalId` on every call-linked
+outbound event. `data.agent.id` identifies the Ringee AI Voice Agent, not your
+CRM record.
 
 </Accordion>
 

@@ -116,12 +116,12 @@ curl -X POST "https://api.ringee.io/api/v1/ai-voice-agents/<agentId>/calls" \
   }'
 ```
 
-| Field            | Required | Description                                                                        |
-| ---------------- | -------- | ---------------------------------------------------------------------------------- |
-| `to`             | Yes      | Destination number. Ringee validates and normalizes it before dialing.             |
-| `from_number_id` | No       | Eligible caller number. Required if the agent has no assigned or default number.   |
-| `variables`      | No       | String values defined by the agent type. Every required variable must be supplied. |
-| `metadata`       | No       | Arbitrary correlation data echoed in the result.                                   |
+| Field            | Required | Description                                                                                         |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `to`             | Yes      | Destination number. Ringee validates and normalizes it before dialing.                              |
+| `from_number_id` | No       | Eligible caller number. Required if the agent has no assigned or default number.                    |
+| `variables`      | No       | String values defined by the agent type. Every required variable must be supplied.                  |
+| `metadata`       | No       | Arbitrary correlation data echoed in the result. `external_id` also propagates to related webhooks. |
 
 The response returns immediately:
 
@@ -131,6 +131,12 @@ The response returns immediately:
   "status": "initiating"
 }
 ```
+
+`id` is the AI Voice Agent call id. Use it with the result endpoints. Outbound
+webhooks identify the underlying telephony call as `data.callId`;
+`call.outcome.updated` also includes the start-response id as
+`data.agentCallId`. Use `metadata.external_id` when you need one correlation id
+across every event type.
 
 Starting a call is non-idempotent. Each successful request creates a new call and can incur real usage. Do not automatically retry an ambiguous response.
 
@@ -149,7 +155,7 @@ Both routes return the normalized public result shape:
 {
   "call_id": "8ddf384a-9b9d-44dd-a120-23395b1f4c98",
   "status": "completed",
-  "outcome": "appointment_booked",
+  "outcome": "meeting_booked",
   "summary": "Carlos agreed to a product demo on Friday at 10:30 AM.",
   "sentiment": "positive",
   "extracted_data": {
@@ -162,6 +168,32 @@ Both routes return the normalized public result shape:
 ```
 
 The list route wraps results in `{ data, total, page, limit }`. Post-call analysis can arrive shortly after the phone status becomes terminal, so poll again if `summary`, `sentiment` or `extracted_data` is still empty.
+
+## Receive results by webhook
+
+Polling and outbound webhooks can be used together. Subscribe the same Custom
+Integration to the events you need:
+
+| Event                  | What it reports                                                 |
+| ---------------------- | --------------------------------------------------------------- |
+| `call.completed`       | The terminal phone detail for a completed or unanswered call    |
+| `call.failed`          | A terminal technical failure                                    |
+| `call.outcome.updated` | The normalized public outcome plus `data.call` telephony detail |
+| `callback.created`     | A callback the live agent successfully scheduled                |
+| `meeting.created`      | A meeting the live agent successfully booked                    |
+| `recording.ready`      | The processed recording                                         |
+
+When the start request contains `metadata.external_id` or
+`metadata.externalId`, each call-linked event exposes the value as
+`data.externalId`. It also includes `data.user` and the AI Voice Agent reference
+under `data.agent` when those actors can be resolved.
+
+<Note>
+  The result API and webhook contract use the same canonical outcome names,
+  including `meeting_booked` and `callback_scheduled`. Ringee normalizes the
+  historical names `appointment_booked` and `callback_requested` before
+  returning them.
+</Note>
 
 ## Common errors
 
@@ -184,5 +216,8 @@ The Public API intentionally exposes execution, not agent administration. Create
   </Card>
   <Card title="Calls and results" icon="phone" href="/voice-agents/calls">
     Understand status, outcomes, polling and billing
+  </Card>
+  <Card title="Outbound webhooks" icon="webhook" href="/api/outbound-webhooks">
+    Receive terminal, outcome and artifact events
   </Card>
 </CardGroup>

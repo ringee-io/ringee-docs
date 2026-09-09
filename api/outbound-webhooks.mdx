@@ -1,9 +1,12 @@
 ---
 title: Outbound webhooks
-description: "Receive Ringee call activity in your CRM, verified and idempotent"
+description: "Receive Ringee activity in your application, verified and idempotent"
 ---
 
 Ringee pushes the events selected on your Custom Integration to its configured HTTP(S) endpoint. Every delivery is **HMAC-signed** and retried up to 10 times until your endpoint acknowledges it.
+
+Calls generate terminal events only. Human and AI Voice Agent calls use the same
+delivery pipeline, envelope, subscriptions and retry policy.
 
 ## Configure the endpoint
 
@@ -25,6 +28,7 @@ In **Integrations → Custom Integrations → Configure → Settings**:
 ```http
 POST https://your-crm.example.com/webhooks/ringee
 Content-Type: application/json
+User-Agent: Ringee-Webhooks/1.0
 Ringee-Signature: t=1747999938,v1=8f4c…
 Ringee-Timestamp: 1747999938
 ```
@@ -36,9 +40,40 @@ Ringee-Timestamp: 1747999938
   "occurredAt": "2026-05-23T14:42:18.000Z",
   "workspaceId": "org_2k7yX…",
   "integrationId": "ci_…",
-  "data": {}
+  "data": {
+    "callId": "f3b1…",
+    "externalId": "crm-contact-42",
+    "user": {
+      "id": "usr_…",
+      "email": "ada@babbage.example.com",
+      "fullName": "Ada Lovelace"
+    },
+    "agent": { "id": "va_…", "name": "Sofia" }
+  }
 }
 ```
+
+## Identify the source
+
+Outbound events can include these shared `data` fields:
+
+| Field             | When present                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `data.user`       | The Ringee user the event belongs to, including `id`, primary `email` and `fullName`.                        |
+| `data.agent`      | The AI Voice Agent that produced the event, as `{ id, name }`. It is absent for human-operated calls.        |
+| `data.externalId` | Your correlation id for an AI Voice Agent call, copied from `metadata.external_id` or `metadata.externalId`. |
+
+Actor enrichment is best-effort. Ringee still delivers the event if the user or
+agent can no longer be resolved, so treat `data.user` and `data.agent` as
+optional. `data.externalId` follows every call-linked event from the same AI
+Voice Agent call, including terminal, outcome, callback, meeting and recording
+events.
+
+<Tip>
+  Set `metadata.external_id` when you start an AI Voice Agent call. You can then
+  join every related webhook to your own record without parsing arbitrary
+  metadata.
+</Tip>
 
 ## Verify the signature
 
@@ -124,12 +159,23 @@ def verify_ringee_webhook(raw_body: str, signature_header: str,
     if not signature_header or not timestamp_header:
         return False
 
-    parts = dict(p.split("=", 1) for p in signature_header.split(","))
+    try:
+        parts = dict(p.split("=", 1) for p in signature_header.split(","))
+    except ValueError:
+        return False
+
     timestamp, signature = parts.get("t"), parts.get("v1")
     if not timestamp or not signature or timestamp != timestamp_header:
         return False
 
-    if abs(int(time.time()) - int(timestamp)) > TOLERANCE_SECONDS:
+    if len(signature) != 64 or any(c not in "0123456789abcdefABCDEF" for c in signature):
+        return False
+
+    try:
+        age = abs(int(time.time()) - int(timestamp))
+    except ValueError:
+        return False
+    if age > TOLERANCE_SECONDS:
         return False
 
     expected = hmac.new(
@@ -179,7 +225,8 @@ Deno.serve(async (req) => {
 
 ## Idempotency
 
-The same `eventId` can arrive more than once — that is by design, not a bug. Retries, network timeouts and redeliveries all reuse it.
+The same `eventId` can arrive more than once — that is by design, not a bug.
+Transport retries reuse the exact stored payload and `eventId`.
 
 Store received events in a table with a `UNIQUE` constraint on the event id:
 
@@ -210,6 +257,10 @@ Insert the `eventId` **before** processing. If the insert conflicts, the event i
 
 After the final attempt the delivery is marked `failed` and Ringee sends email and device push notifications to the integration owner or organization admins. Alerts are throttled per integration for six hours. Deliveries are also failed immediately if the integration has been disabled or deleted.
 
+The queued delivery worker runs every 5 seconds and claims up to 100 due
+deliveries. It sends independent deliveries in parallel, so neither the queue
+cadence nor creation time establishes ordering.
+
 <Tip>
   Inspect the delivery status, cumulative attempt count and last error in the
   dashboard, or via `GET /api/integrations/custom/:id/outbound-logs`. See [Logs
@@ -223,8 +274,10 @@ Deliveries are independent rows sent in parallel waves — **order is not guaran
 Design for this:
 
 - `call.outcome.updated` can arrive before `call.completed`. Upsert the activity by `callId` from either event.
+- `call.outcome.updated` includes `data.call` when the telephony row can still be resolved, so it can create or update the activity by itself.
 - `recording.ready` can arrive seconds or minutes after the call ended.
 - `meeting.created` and `call.outcome.updated` both fire when an outcome is `meeting_booked`.
+- A subscribed AI Voice Agent call can produce `call.completed` or `call.failed`, then `call.outcome.updated`, and later callback, meeting or recording events. Do not wait for a fixed sequence.
 
 ## Next steps
 

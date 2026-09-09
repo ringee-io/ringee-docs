@@ -1,6 +1,6 @@
 ---
 title: CRM contacts
-description: 'Attach the record your app has on screen'
+description: "Attach the record your app has on screen"
 ---
 
 Tell the dialer who the agent is looking at. The bundled UIs show the name and avatar, prefill the destination, and Ringee attributes the call to the right contact.
@@ -16,13 +16,13 @@ ringee.setContact({
 
 ## Fields
 
-| Field | Purpose |
-|---|---|
-| `name` | Visual label in the bundled UI |
-| `number` | Prefills the destination |
-| `imageUrl` | Avatar in the bundled UI |
-| `contactId` | Native Ringee contact UUID |
-| `externalContactId` | The contact's id in your CRM |
+| Field               | Purpose                        |
+| ------------------- | ------------------------------ |
+| `name`              | Visual label in the bundled UI |
+| `number`            | Prefills the destination       |
+| `imageUrl`          | Avatar in the bundled UI       |
+| `contactId`         | Native Ringee contact UUID     |
+| `externalContactId` | The contact's id in your CRM   |
 
 ## `contactId` or `externalContactId`?
 
@@ -30,17 +30,22 @@ You need one, not both.
 
 <CardGroup cols={2}>
   <Card title="contactId" icon="fingerprint">
-    Use it when you already know the internal Ringee UUID — for example because your app reads Ringee data directly.
+    Use it when you already know the internal Ringee UUID — for example because
+    your app reads Ringee data directly.
   </Card>
   <Card title="externalContactId" icon="link">
-    Use it when your [Custom Integration](/api/overview) maps a CRM id to a Ringee contact.
+    Use it when your [Custom Integration](/api/overview) maps a CRM id to a
+    Ringee contact.
   </Card>
 </CardGroup>
 
 `externalContactId` is the same value you send as `data.externalId` in [`contact.upserted`](/api/inbound-events#contact-upserted). Sync contacts through the Public API first and Ringee resolves the link automatically.
 
 <Tip>
-Keeping `externalContactId` consistent is what makes the loop close: the call comes back to your CRM in [`call.completed`](/api/events-reference#call-completed) carrying `data.contact.externalId`, so you can attach the activity to the right record without matching phone numbers.
+  Keep `externalContactId` consistent so Ringee resolves the correct contact.
+  When you process [`call.completed`](/api/events-reference#call-completed), do
+  not rely on a contact reference alone: keep a normalized phone-number fallback
+  for activity matching.
 </Tip>
 
 ## Prefill just a number
@@ -110,21 +115,29 @@ ringee.setContact(null);
 
 The SDK emits `ended` with a call snapshot in the browser, but the durable record of what happened arrives through your [outbound webhooks](/api/outbound-webhooks):
 
-| Event | Carries |
-|---|---|
-| `call.completed` | Direction, status, timing, duration |
+| Event                  | Carries                                     |
+| ---------------------- | ------------------------------------------- |
+| `call.completed`       | Direction, status, timing, duration         |
 | `call.outcome.updated` | The outcome the agent logged, plus the note |
-| `recording.ready` | Recording URL and transcript |
+| `recording.ready`      | Recording URL and transcript                |
 
 Write your CRM activity from the webhooks — they are signed, retried and idempotent. Use the browser events for live UI only.
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Sync contacts to Ringee" icon="arrows-rotate" href="/api/inbound-events">
+  <Card
+    title="Sync contacts to Ringee"
+    icon="arrows-rotate"
+    href="/api/inbound-events"
+  >
     Establish the `externalId` link
   </Card>
-  <Card title="Receive call activity" icon="webhook" href="/api/outbound-webhooks">
+  <Card
+    title="Receive call activity"
+    icon="webhook"
+    href="/api/outbound-webhooks"
+  >
     Close the loop back into your CRM
   </Card>
 </CardGroup>

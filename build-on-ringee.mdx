@@ -77,7 +77,10 @@ flowchart LR;
 <Steps>
 <Step title="Sync your records">
 
-Send `contact.upserted` so Ringee knows who is callable, and keep `externalId` stable — it is the join key for everything that follows. See [Inbound events](/api/inbound-events).
+Send `contact.upserted` so Ringee knows who is callable, and keep `externalId`
+stable so click-to-call and the Dialer SDK can resolve the same contact. For AI
+Voice Agent webhook correlation, also send it as `metadata.external_id` when you
+start the call. See [Inbound events](/api/inbound-events).
 
 </Step>
 

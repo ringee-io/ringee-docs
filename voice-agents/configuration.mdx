@@ -19,9 +19,13 @@ Variables describe the person and the reason for one call. Required values must 
 | `reason`             |       No | Why you are calling, in one line                       |
 | `additional_context` |       No | Anything else the agent should know                    |
 
-Possible outcomes: `appointment_booked`, `callback_requested`, `not_interested`, `no_conversation`, `unknown`.
+Possible outcomes: `meeting_booked`, `callback_scheduled`, `not_interested`,
+`no_answer`, `no_conversation`, `wrong_number`, `unknown`.
 
-This type must have a calendar integration before it can become active. The agent may offer only slots returned by the live availability tool and may report a meeting as booked only after the booking tool succeeds.
+The agent may offer only slots returned by Ringee's live availability tool and
+may report a meeting as booked only after the booking tool succeeds. Google and
+Microsoft calendars are optional sync targets; their absence does not block the
+agent.
 
 ### Reminders & Notifications
 
@@ -34,7 +38,8 @@ This type must have a calendar integration before it can become active. The agen
 | `appointment_time`   |       No | Time being confirmed                            |
 | `additional_context` |       No | Anything else the agent should mention          |
 
-Possible outcomes: `confirmed`, `cannot_attend`, `callback_requested`, `not_interested`, `no_conversation`, `unknown`.
+Possible outcomes: `confirmed`, `cannot_attend`, `callback_scheduled`,
+`not_interested`, `no_answer`, `no_conversation`, `wrong_number`, `unknown`.
 
 This type does not reschedule an appointment. When the person needs a change or asks for a human, it creates a human-support notification for the workspace.
 

@@ -113,6 +113,11 @@ Subscription values use database-style underscores in this endpoint:
 
 `test.ping` is not a subscription. It is sent only by the test endpoint.
 
+Subscriptions apply to every matching event in the workspace, including events
+produced by AI Voice Agent calls. Ringee queues an event only when the
+integration is active, the event is selected and `outboundUrl` is configured.
+Changing the selection does not backfill events that occurred earlier.
+
 <Note>
   Setting `status` to `disabled` rejects the `cik_live_…` key, prevents new
   outbound deliveries and invalidates Dialer SDK publishable keys.

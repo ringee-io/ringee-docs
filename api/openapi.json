@@ -3,7 +3,7 @@
   "info": {
     "title": "Ringee Public API",
     "version": "1.0.0",
-    "description": "The Ringee Public API. Sync contacts and companies, open a secure human dialer, and list, start and inspect AI Voice Agent calls.\n\nAuthenticate server-to-server requests with the `cik_live_` secret key of an active Custom Integration. The key identifies the integration and workspace and must never reach a browser. AI Voice Agent routes require an organization-scoped integration.",
+    "description": "The Ringee Public API. Sync contacts and companies, open a secure human dialer, list, start and inspect AI Voice Agent calls, and receive signed outbound events.\n\nAuthenticate server-to-server requests with the `cik_live_` secret key of an active Custom Integration. The key identifies the integration and workspace and must never reach a browser. AI Voice Agent routes require an organization-scoped integration. Verify Ringee outbound webhooks with the separate `whsec_` signing secret.",
     "contact": {
       "name": "Ringee",
       "url": "https://ringee.io"
@@ -497,6 +497,78 @@
       }
     }
   },
+  "webhooks": {
+    "outboundEvent": {
+      "post": {
+        "operationId": "receiveRingeeOutboundEvent",
+        "summary": "Receive an outbound Ringee event",
+        "description": "Ringee sends a signed event to the outbound URL configured on the Custom Integration. Verify the HMAC against the raw request body before parsing JSON. Return any 2xx response within 15 seconds. Failed deliveries are retried up to 10 times, and ordering is not guaranteed.",
+        "tags": ["Ringee to your app"],
+        "security": [
+          {
+            "WebhookSignature": [],
+            "WebhookTimestamp": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutboundWebhookEvent"
+              },
+              "examples": {
+                "callOutcomeUpdated": {
+                  "summary": "AI Voice Agent outcome",
+                  "value": {
+                    "event": "call.outcome.updated",
+                    "eventId": "evt_01HX5ZBN7Y0Q3S4M2K1WJ8V5DC",
+                    "occurredAt": "2026-05-23T14:50:00.000Z",
+                    "workspaceId": "org_2k7yX…",
+                    "integrationId": "ci_…",
+                    "data": {
+                      "callId": "f3b1…",
+                      "externalId": "crm-contact-42",
+                      "user": {
+                        "id": "usr_…",
+                        "email": "ada@babbage.example.com",
+                        "fullName": "Ada Lovelace"
+                      },
+                      "agent": { "id": "va_…", "name": "Sofia" },
+                      "call": {
+                        "callId": "f3b1…",
+                        "fromNumber": "+14155550100",
+                        "toNumber": "+14155550123",
+                        "status": "completed",
+                        "direction": "outbound",
+                        "startedAt": "2026-05-23T14:39:56.000Z",
+                        "answeredAt": "2026-05-23T14:40:02.000Z",
+                        "endedAt": "2026-05-23T14:42:18.000Z",
+                        "durationSeconds": 142
+                      },
+                      "outcome": "meeting_booked",
+                      "updatedAt": "2026-05-23T14:50:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The event was acknowledged. Any 2xx status stops retries."
+          },
+          "401": {
+            "description": "Your endpoint rejected a missing, malformed or invalid signature."
+          },
+          "default": {
+            "description": "A non-2xx response counts as a failed attempt and is retried."
+          }
+        }
+      }
+    }
+  },
   "components": {
     "securitySchemes": {
       "ApiKeyAuth": {
@@ -510,6 +582,18 @@
         "scheme": "bearer",
         "bearerFormat": "cik_live_…",
         "description": "The same Custom Integration `cik_live_` API key, sent as a Bearer credential. Supported by AI Voice Agent routes."
+      },
+      "WebhookSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Ringee-Signature",
+        "description": "`t=<unixSeconds>,v1=<hexDigest>`, where the digest is HMAC-SHA256 of `<timestamp>.<rawBody>` with the `whsec_` signing secret."
+      },
+      "WebhookTimestamp": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Ringee-Timestamp",
+        "description": "Unix timestamp in seconds. It must match `t` in `Ringee-Signature`; reject timestamps outside your replay-tolerance window."
       }
     },
     "schemas": {
@@ -1021,7 +1105,11 @@
         "type": "object",
         "required": ["id", "status"],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "AI Voice Agent call id used by the result endpoints. Outbound webhooks use a separate telephony `data.callId`; correlate them with `metadata.external_id` or `data.agentCallId` on the outcome event."
+          },
           "status": {
             "type": "string",
             "enum": ["created", "initiating"]
@@ -1040,7 +1128,11 @@
           "metadata"
         ],
         "properties": {
-          "call_id": { "type": "string", "format": "uuid" },
+          "call_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "AI Voice Agent call id returned by the start-call endpoint."
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -1058,12 +1150,14 @@
           "outcome": {
             "type": ["string", "null"],
             "enum": [
-              "appointment_booked",
+              "meeting_booked",
               "confirmed",
               "cannot_attend",
-              "callback_requested",
+              "callback_scheduled",
               "not_interested",
+              "no_answer",
               "no_conversation",
+              "wrong_number",
               "unknown",
               null
             ]
@@ -1091,6 +1185,123 @@
           "total": { "type": "integer", "minimum": 0 },
           "page": { "type": "integer", "minimum": 1 },
           "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+        }
+      },
+      "OutboundWebhookEvent": {
+        "type": "object",
+        "description": "Common envelope for every Ringee outbound webhook. Event-specific data fields are additive; ignore unknown fields. Actor and AI correlation fields are best-effort and may be omitted.",
+        "required": [
+          "event",
+          "eventId",
+          "occurredAt",
+          "workspaceId",
+          "integrationId",
+          "data"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "call.completed",
+              "call.outcome.updated",
+              "note.created",
+              "callback.created",
+              "meeting.created",
+              "recording.ready",
+              "call.missed",
+              "call.failed",
+              "dnc.created",
+              "test.ping"
+            ]
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Stable id for one delivery. Transport retries reuse it; deduplicate on this value.",
+            "example": "evt_01HX5ZBN7Y0Q3S4M2K1WJ8V5DC"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the domain event occurred."
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Organization id for an organization workspace, otherwise the personal workspace's user id."
+          },
+          "integrationId": {
+            "type": "string",
+            "description": "Custom Integration receiving the delivery."
+          },
+          "data": {
+            "type": "object",
+            "description": "Event-specific payload. Optional common fields identify the Ringee user, AI Voice Agent and caller-supplied correlation id.",
+            "properties": {
+              "callId": {
+                "type": "string",
+                "description": "Ringee call UUID on call-linked events."
+              },
+              "agentCallId": {
+                "type": "string",
+                "description": "AI Voice Agent call UUID on `call.outcome.updated`. This is the id returned by the start-call endpoint."
+              },
+              "user": {
+                "$ref": "#/components/schemas/OutboundUserReference"
+              },
+              "agent": {
+                "$ref": "#/components/schemas/OutboundAgentReference"
+              },
+              "externalId": {
+                "type": "string",
+                "description": "`metadata.external_id` or `metadata.externalId` from the originating AI Voice Agent call."
+              },
+              "call": {
+                "$ref": "#/components/schemas/OutboundCallDetail"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "OutboundUserReference": {
+        "type": "object",
+        "description": "The Ringee user the event belongs to. Omitted only when the user can no longer be resolved.",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Primary email address when available."
+          },
+          "fullName": { "type": "string" }
+        }
+      },
+      "OutboundAgentReference": {
+        "type": "object",
+        "description": "AI Voice Agent that produced the event. Absent for human-operated calls.",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "OutboundCallDetail": {
+        "type": "object",
+        "description": "Telephony detail included in `call.outcome.updated` when the call row can still be resolved.",
+        "required": ["callId", "fromNumber", "toNumber", "status", "direction"],
+        "properties": {
+          "callId": { "type": "string" },
+          "fromNumber": { "type": "string" },
+          "toNumber": { "type": "string" },
+          "status": { "type": "string" },
+          "direction": {
+            "type": "string",
+            "description": "Normally `inbound` or `outbound`; legacy rows can use `incoming` or `outgoing`."
+          },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "answeredAt": { "type": "string", "format": "date-time" },
+          "endedAt": { "type": "string", "format": "date-time" },
+          "durationSeconds": { "type": "number", "minimum": 0 }
         }
       },
       "Error": {

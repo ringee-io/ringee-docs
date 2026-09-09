@@ -28,10 +28,10 @@ flowchart LR;
 
 Two server-side entry points are enough:
 
-| Component             | Responsibility                                                                                             |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Outbound function** | Sends `contact.upserted` / `company.upserted` / `*.deleted` and performs click-to-call. Holds the API key. |
-| **Inbound webhook**   | Receives Ringee events. Verifies the HMAC. Must be publicly reachable and must not require your own auth.  |
+| Component             | Responsibility                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Public API client** | Sends CRM events, creates click-to-call sessions and can start AI Voice Agent calls. Holds the `cik_live_…` API key.             |
+| **Webhook endpoint**  | Receives Ringee events. Verifies the HMAC. Must be publicly reachable and must not require your application's normal auth token. |
 
 ## Configuration and secrets
 
@@ -63,7 +63,11 @@ Insert `eventId` with a `UNIQUE` constraint before processing. On conflict, retu
 
 <Step title="Map call events to activities">
 
-Handle `call.completed`, `call.missed` and `call.failed`, keyed by `data.callId`. Then `call.outcome.updated`, `note.created`, `callback.created`, `meeting.created`, `recording.ready` and `dnc.created`.
+Handle `call.completed`, `call.missed` and `call.failed`, keyed by
+`data.callId`. Then handle `call.outcome.updated`, `note.created`,
+`callback.created`, `meeting.created`, `recording.ready` and `dnc.created`.
+`call.outcome.updated` includes `data.call` when available, so it can upsert the
+activity even if it arrives first.
 
 </Step>
 
@@ -88,13 +92,19 @@ Expose status, the webhook URL to paste into Ringee, last sync, last error, **Te
 
 ## Matching contacts
 
-Ringee sends `data.contact.externalId` when the record was previously linked. Resolve in this order:
+Resolve an event to your record in this order:
 
-1. `data.contact.externalId` — the reliable key.
-2. Normalized phone number, if no `externalId` is present.
+1. `data.externalId` — when you started an AI Voice Agent call with
+   `metadata.external_id` or `metadata.externalId`.
+2. `data.contact.externalId` — when the contact was linked through
+   `contact.upserted` and the event includes a contact reference.
+3. Normalized phone number if neither correlation id is present.
    - For **inbound** calls, match on `fromNumber`.
    - For **outbound** calls, match on `toNumber`.
-3. No match: create an **unlinked activity** showing the raw phone number.
+4. No match: create an **unlinked activity** showing the raw phone number.
+
+`data.agent.id` is a Ringee AI Voice Agent id. Do not use it as a contact id.
+`data.user.id` identifies the Ringee user the event belongs to.
 
 <Warning>
   Never create a duplicate contact from a call event. An unlinked activity is
@@ -191,6 +201,11 @@ Your webhook function may use administrative database credentials — but **only
 - Outcome received **before** `call.completed` still lands on one activity.
 - Outcome received **after** `call.completed` updates, never duplicates.
 - Recording received later attaches to the existing activity.
+- Human calls omit `data.agent`; AI Voice Agent calls include its `{ id, name }`.
+- `metadata.external_id` from an AI Voice Agent call is returned as
+  `data.externalId` on its terminal, outcome, callback, meeting and recording
+  events.
+- A missing `data.user` or `data.agent` never prevents processing by `callId`.
 
 </Accordion>
 

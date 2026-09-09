@@ -48,7 +48,8 @@ Click **Test webhook**. Ringee sends a `test.ping` event to your endpoint and sh
 
 ## Authenticate a request
 
-Send the API key in the `X-Ringee-Api-Key` header.
+Send the API key in the `X-Ringee-Api-Key` header for inbound CRM events and
+click-to-call.
 
 ```bash
 curl -X POST https://api.ringee.io/api/integrations/custom/webhook \
@@ -61,6 +62,10 @@ curl -X POST https://api.ringee.io/api/integrations/custom/webhook \
     "data": { "externalId": "ext_42", "phoneNumber": "+14155550123" }
   }'
 ```
+
+AI Voice Agent endpoints accept either `X-Ringee-Api-Key` or
+`Authorization: Bearer cik_live_…`. Send exactly one authentication header; a
+request containing both is rejected with `401`.
 
 <Warning>
   The API key is a **server-side secret**. Never send it from a browser, never

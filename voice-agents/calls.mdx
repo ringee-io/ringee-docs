@@ -35,7 +35,10 @@ The destination is normalized to E.164 before dialing. MCP and CLI require E.164
 }
 ```
 
-`metadata` is opaque caller data. Ringee stores it on the voice-agent call and echoes it back in the result, which makes it useful for CRM ids and workflow correlation.
+`metadata` is opaque caller data. Ringee stores it on the voice-agent call and
+echoes it back in the result, which makes it useful for CRM ids and workflow
+correlation. When it includes `external_id` or `externalId`, Ringee also exposes
+that value as `data.externalId` on every related Custom Integration webhook.
 
 If the destination does not match an existing contact, Ringee creates one when possible. `first_name`, `last_name` and `email` fill the new contact's identity. A failure to create that convenience record does not block the requested call.
 
@@ -65,15 +68,20 @@ Status describes the phone leg, not what the conversation achieved.
 
 Outcome describes what the conversation achieved. A `completed` call can still have `not_interested` or `unknown` as its outcome.
 
-| Outcome              | Meaning                                               |
-| -------------------- | ----------------------------------------------------- |
-| `appointment_booked` | The booking tool created a meeting                    |
-| `confirmed`          | The person confirmed or acknowledged the notification |
-| `cannot_attend`      | The person cannot make the appointment                |
-| `callback_requested` | The person asked for another call or follow-up        |
-| `not_interested`     | The person declined                                   |
-| `no_conversation`    | No useful conversation happened                       |
-| `unknown`            | The analysis could not classify the result            |
+| Outcome              | Meaning                                                  |
+| -------------------- | -------------------------------------------------------- |
+| `meeting_booked`     | The booking tool created a meeting                       |
+| `confirmed`          | The person confirmed or acknowledged the notification    |
+| `cannot_attend`      | The person cannot make the appointment                   |
+| `callback_scheduled` | The callback tool scheduled another call                 |
+| `not_interested`     | The person declined                                      |
+| `no_answer`          | The call was not answered, was busy or reached voicemail |
+| `no_conversation`    | The call connected without a meaningful exchange         |
+| `wrong_number`       | The person said the number or identity was wrong         |
+| `unknown`            | The analysis could not classify the result               |
+
+Historical `appointment_booked` and `callback_requested` values are normalized
+to `meeting_booked` and `callback_scheduled` before Ringee returns a result.
 
 ## Polling
 
@@ -101,6 +109,23 @@ curl "https://api.ringee.io/api/v1/ai-voice-agents/calls/<callId>" \
 
 Stop polling once the status is terminal and the analysis fields your workflow needs are populated. Analysis can arrive shortly after the phone leg ends.
 
+## Webhook lifecycle
+
+An AI Voice Agent call uses the same signed outbound webhook pipeline as a human
+call. Depending on what happened, subscribed integrations can receive a
+terminal `call.completed` or `call.failed`, a later `call.outcome.updated`, and
+separate `callback.created`, `meeting.created` or `recording.ready` events.
+
+Each call-linked event carries the Ringee `callId`. When available, it also
+carries `data.user`, `data.agent` and your `data.externalId`. Deliveries are
+independent and ordering is not guaranteed, so upsert by `callId` and
+deduplicate by `eventId`.
+
+The id returned when you start the call identifies the AI Voice Agent call and
+is the `call_id` used by result polling. It is not the same as the telephony
+`data.callId`; `call.outcome.updated` exposes it separately as
+`data.agentCallId`.
+
 ## Billing
 
 An AI voice agent call has two provider-cost components:
@@ -120,5 +145,8 @@ The self-hosted `AI_VOICE_AGENT_MAX_CALL_SECONDS` value places a hard ceiling on
   </Card>
   <Card title="Self-hosting" icon="gear" href="/voice-agents/self-hosting">
     Configure callbacks, models, limits and storage
+  </Card>
+  <Card title="Webhook events" icon="webhook" href="/api/events-reference">
+    Map call, outcome, meeting and recording payloads
   </Card>
 </CardGroup>
