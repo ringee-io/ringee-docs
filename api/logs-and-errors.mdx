@@ -40,34 +40,56 @@ GET /api/integrations/custom/:id/outbound-logs?limit=50&cursor=…
 
 ## Inbound errors
 
-These are returned synchronously to your request.
+### Rejected before Ringee records anything
+
+A bad key or an incomplete envelope is answered synchronously, and nothing reaches the inbound log. Every envelope problem is reported in one message, joined by `; `:
 
 ```json
 {
   "statusCode": 400,
-  "message": "eventId is required",
+  "message": "eventId is required; occurredAt is required; data must be an object",
   "error": "Bad Request"
 }
 ```
 
-| Status | Message                      | Fix                                                                                                        |
-| ------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `401`  | `Invalid API key format`     | The header is missing or the value is not a well-formed `cik_live_` key.                                   |
-| `401`  | `Invalid API key`            | The key does not match any integration — it was likely rotated.                                            |
-| `401`  | `Integration is disabled`    | Re-enable the integration in the dashboard.                                                                |
-| `400`  | `body must be a JSON object` | Send `Content-Type: application/json` and a JSON object.                                                   |
-| `400`  | `event is required`          | Add `event` to the envelope.                                                                               |
-| `400`  | `eventId is required`        | Add a unique `eventId`.                                                                                    |
-| `400`  | `occurredAt is required`     | Add an ISO-8601 `occurredAt`.                                                                              |
-| `400`  | `data must be an object`     | `data` must be a JSON object, even when nearly empty.                                                      |
-| `400`  | `Unsupported event: …`       | Only `contact.upserted`, `company.upserted`, `contact.deleted` and `company.deleted` are accepted inbound. |
+| Status | Message                      | Fix                                                                      |
+| ------ | ---------------------------- | ------------------------------------------------------------------------ |
+| `401`  | `Invalid API key format`     | The header is missing or the value is not a well-formed `cik_live_` key. |
+| `401`  | `Invalid API key`            | The key does not match any integration — it was likely rotated.          |
+| `401`  | `Integration is disabled`    | Re-enable the integration in the dashboard.                              |
+| `400`  | `body must be a JSON object` | Send `Content-Type: application/json` and a JSON object.                 |
+| `400`  | `event is required`          | Add `event` to the envelope.                                             |
+| `400`  | `eventId is required`        | Add a unique `eventId`.                                                  |
+| `400`  | `occurredAt is required`     | Add an ISO-8601 `occurredAt`.                                            |
+| `400`  | `data must be an object`     | `data` must be a JSON object, even when nearly empty.                    |
+| `400`  | `Unsupported event: …`       | The message lists the four event names Ringee accepts inbound.           |
 
-A `202` with `"status": "failed"` means the event was accepted, stored and then rejected during processing — for example a missing required field inside `data`. The reason is in `message` and in the inbound log.
+### Recorded, then rejected
+
+A `202` with `"status": "failed"` means the event was authenticated and stored, then rejected while being applied. It is in the inbound log with the reason in `errorMessage`, and **nothing was written**: validation runs before the first record is touched.
+
+| Message                                      | Cause                                                                         |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| `data.<field> is required`                   | A required field is missing or blank. All of them are listed at once.         |
+| `data.<field> must be a string \| an object` | A required field has the wrong JSON type.                                     |
+| `data.campaignId must be a UUID`             | The id is not a UUID. Ids are never ignored silently.                         |
+| `data.phoneNumber is not a dialable number`  | Nothing in the value could be read as a phone number.                         |
+| `Campaign not found` / `Access denied`       | `data.campaignId` matches no campaign in this workspace.                      |
+| `Campaigns require an organization`          | `data.campaignId` was sent from a personal workspace, which has no campaigns. |
 
 <Warning>
   Resending a failed event with the **same** `eventId` returns `skipped`, not a
   retry. Fix the payload and send it with a **new** `eventId`.
 </Warning>
+
+### Applied, with warnings
+
+A `processed` response can carry a `warnings` array — an unknown field name, a phone number read with an assumed country, an `ownerEmail` matching nobody. The event applied; something in it did not. See [Inbound events](/api/inbound-events#warnings).
+
+<Note>
+  Warnings are returned in the response only. They are not stored on the inbound
+  log row, so capture them when you send.
+</Note>
 
 ## Outbound delivery failures
 

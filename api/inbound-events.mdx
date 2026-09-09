@@ -8,7 +8,9 @@ Send everything your CRM knows about a contact or company to a single Ringee end
 
 Pick the event you are sending in the request body above — each one has its own `data` shape.
 
-Every request uses the shared envelope:
+## The envelope
+
+Every request uses the same four top-level fields:
 
 | Field        | Type   | Required | Description                               |
 | ------------ | ------ | -------- | ----------------------------------------- |
@@ -19,7 +21,7 @@ Every request uses the shared envelope:
 
 ## Reading the response
 
-The endpoint returns **202 Accepted** for any well-formed, authenticated request. The real result is in the JSON body.
+The endpoint returns **202 Accepted** for any authenticated request with a complete envelope. The real result is in the JSON body.
 
 | Status                                                  | Meaning                                          | What to do                                                                                      |
 | ------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -31,6 +33,59 @@ The endpoint returns **202 Accepted** for any well-formed, authenticated request
   A `202` status code only means the transport was accepted. Do not treat it as
   a successful sync without checking `status` in the body.
 </Warning>
+
+### Warnings
+
+A `processed` response can also carry a `warnings` array. The event applied, but something you sent had no effect:
+
+```json
+{
+  "status": "processed",
+  "eventId": "crm_9f1c2a7e",
+  "warnings": [
+    "Unknown contact.upserted fields were ignored: campagnId. Check them for typos.",
+    "data.ownerEmail \"rep@example.com\" does not match a member of this workspace; the contact was left unassigned."
+  ]
+}
+```
+
+Warnings are how you find the bugs that do not fail: a misspelled field name, a number without a country code, an owner nobody in Ringee matches. Log them while you build and surface them on your settings screen — a field Ringee dropped silently is the most expensive kind of sync bug to find later.
+
+## What the endpoint guarantees
+
+<AccordionGroup>
+<Accordion title="An event applies completely or not at all" icon="shield-check">
+
+Ringee validates the whole payload — field shapes, the phone number, the campaign you named — before it writes anything. A `failed` response means nothing was created or updated, so you can correct the payload and send it again knowing Ringee holds no half-synced record.
+
+</Accordion>
+
+<Accordion title="One request tells you everything that is wrong" icon="list-check">
+
+Problems are reported together, not one per round trip. A missing `externalId` **and** a missing `phoneNumber` come back in the same message:
+
+```json
+{
+  "status": "failed",
+  "eventId": "crm_9f1c2a7e",
+  "message": "data.externalId is required; data.phoneNumber is required"
+}
+```
+
+</Accordion>
+
+<Accordion title="The same eventId is never applied twice" icon="fingerprint">
+
+`eventId` is the idempotency key, scoped to your integration. A transport retry is free: the second delivery returns `skipped` and changes nothing. That also means a **corrected** payload needs a new id — the old one is already recorded.
+
+</Accordion>
+
+<Accordion title="Omitting a field never clears it" icon="eye-slash">
+
+Ringee patches, it does not replace. Send only what changed: `null`, `undefined` and empty strings leave the stored value alone. To blank a field, clear it in Ringee.
+
+</Accordion>
+</AccordionGroup>
 
 ## Event examples
 
@@ -58,30 +113,68 @@ Create or update a contact from your CRM's current state.
 }
 ```
 
-| `data` field                                | Type   | Required | Description                                                           |
-| ------------------------------------------- | ------ | -------- | --------------------------------------------------------------------- |
-| `externalId`                                | string | Yes      | Stable contact id in your system                                      |
-| `phoneNumber`                               | string | Yes      | Dialable number; normalized toward E.164 when possible                |
-| `name`, `firstName`, `lastName`, `fullName` | string | No       | Available name representations                                        |
-| `email`                                     | string | No       | Primary email                                                         |
-| `companyExternalId`                         | string | No       | External company id to link                                           |
-| `companyName`                               | string | No       | Fallback company name when a linked company is unavailable            |
-| `jobTitle`                                  | string | No       | Contact position or title                                             |
-| `ownerEmail`                                | string | No       | Resolves a Ringee member in an organization workspace                 |
-| `ownerExternalId`                           | string | No       | Accepted in the snapshot, but not currently used for owner resolution |
-| `source`                                    | string | No       | Lead source label                                                     |
-| `customFields`                              | object | No       | Arbitrary contact fields                                              |
-| `crmMetadata`                               | object | No       | Provider-specific metadata                                            |
+<ParamField body="data.externalId" type="string" required>
+  Stable contact id in your system. The primary deduplication key.
+</ParamField>
+<ParamField body="data.phoneNumber" type="string" required>
+  Dialable number. Required because the point of a synced contact is that
+  somebody can call it — see [Phone numbers](#phone-numbers).
+</ParamField>
+<ParamField body="data.name" type="string">
+  Display name.
+</ParamField>
+<ParamField body="data.firstName" type="string">
+  Given name.
+</ParamField>
+<ParamField body="data.lastName" type="string">
+  Family name.
+</ParamField>
+<ParamField body="data.fullName" type="string">
+  Pre-composed full name.
+</ParamField>
+<ParamField body="data.email" type="string">
+  Primary email.
+</ParamField>
+<ParamField body="data.companyExternalId" type="string">
+  External company id to link. Ringee creates the company when no link exists
+  yet and `companyName` is present.
+</ParamField>
+<ParamField body="data.companyName" type="string">
+  Fallback company name when a linked company is unavailable.
+</ParamField>
+<ParamField body="data.jobTitle" type="string">
+  Contact position or title.
+</ParamField>
+<ParamField body="data.campaignId" type="string (UUID)">
+  Ringee campaign to add this contact to as a lead — see [Adding a contact to a
+  campaign](#adding-a-contact-to-a-campaign).
+</ParamField>
+<ParamField body="data.ownerEmail" type="string">
+  Resolves a Ringee member in an organization workspace. An email nobody matches
+  leaves the contact unassigned and returns a warning.
+</ParamField>
+<ParamField body="data.ownerExternalId" type="string">
+  Accepted and kept in the stored snapshot, but not currently used for owner
+  resolution.
+</ParamField>
+<ParamField body="data.source" type="string">
+  Lead source label.
+</ParamField>
+<ParamField body="data.customFields" type="object">
+  Arbitrary contact fields.
+</ParamField>
+<ParamField body="data.crmMetadata" type="object">
+  Provider-specific metadata.
+</ParamField>
 
 <Note>
-  **Deduplication order:** `externalId` first, then `phoneNumber` within the
-  same workspace. Sending `null`, `undefined` or empty strings does **not**
-  overwrite existing values — omit a field to leave it untouched.
+  **Deduplication order:** `externalId` first, then the normalized `phoneNumber`
+  within the same workspace.
 </Note>
 
 <Info>
-  In an organization workspace, an unknown `ownerEmail` leaves the contact
-  unassigned. In a personal workspace, the integration owner is used.
+  In a personal workspace the integration owner owns every synced contact, and
+  `ownerEmail` is not used.
 </Info>
 
 </Tab>
@@ -103,24 +196,43 @@ Create or update a contact from your CRM's current state.
 }
 ```
 
-| `data` field   | Type   | Required | Description                                       |
-| -------------- | ------ | -------- | ------------------------------------------------- |
-| `externalId`   | string | Yes      | Stable company id in your system                  |
-| `name`         | string | Yes      | Display name                                      |
-| `legalName`    | string | No       | Registered legal name                             |
-| `domain`       | string | No       | Primary domain and secondary deduplication signal |
-| `industry`     | string | No       | Industry label                                    |
-| `size`         | string | No       | Headcount band, such as `11-50`                   |
-| `phone`        | string | No       | Main phone                                        |
-| `website`      | string | No       | Homepage URL                                      |
-| `source`       | string | No       | Source label                                      |
-| `customFields` | object | No       | Arbitrary company fields                          |
-| `crmMetadata`  | object | No       | Provider-specific metadata                        |
+<ParamField body="data.externalId" type="string" required>
+  Stable company id in your system.
+</ParamField>
+<ParamField body="data.name" type="string" required>
+  Display name.
+</ParamField>
+<ParamField body="data.legalName" type="string">
+  Registered legal name.
+</ParamField>
+<ParamField body="data.domain" type="string">
+  Primary domain, used as a secondary deduplication signal.
+</ParamField>
+<ParamField body="data.industry" type="string">
+  Industry label.
+</ParamField>
+<ParamField body="data.size" type="string">
+  Headcount band, such as `11-50`.
+</ParamField>
+<ParamField body="data.phone" type="string">
+  Main phone.
+</ParamField>
+<ParamField body="data.website" type="string">
+  Homepage URL.
+</ParamField>
+<ParamField body="data.source" type="string">
+  Source label.
+</ParamField>
+<ParamField body="data.customFields" type="object">
+  Arbitrary company fields.
+</ParamField>
+<ParamField body="data.crmMetadata" type="object">
+  Provider-specific metadata.
+</ParamField>
 
 <Note>
   **Deduplication order:** `externalId`, then `domain` within the same
-  workspace. As with contacts, `null`, `undefined` and empty strings do not
-  clear existing values.
+  workspace.
 </Note>
 
 </Tab>
@@ -137,6 +249,10 @@ Marks the contact as archived in Ringee.
   "data": { "externalId": "ext_contact_42" }
 }
 ```
+
+<ParamField body="data.externalId" type="string" required>
+  External contact id previously sent in `contact.upserted`.
+</ParamField>
 
 <Info>
   Ringee never deletes the underlying contact. Call history, notes, callbacks
@@ -158,10 +274,68 @@ Marks the contact as archived in Ringee.
 }
 ```
 
+<ParamField body="data.externalId" type="string" required>
+  External company id previously sent in `company.upserted`.
+</ParamField>
+
 This archives only the link created by this integration. Historical company relationships remain available in Ringee. If no link exists, the delete is a successful no-op.
 
 </Tab>
 </Tabs>
+
+## Phone numbers
+
+Ringee normalizes `data.phoneNumber` to E.164 against real numbering plans. That normalized value is what agents dial and what deduplication matches on.
+
+| You send           | Ringee stores  | Response                              |
+| ------------------ | -------------- | ------------------------------------- |
+| `+14155550123`     | `+14155550123` | Clean.                                |
+| `+34 911 23 45 67` | `+34911234567` | Clean — punctuation is not a problem. |
+| `(415) 555-0123`   | `+14155550123` | A warning: no country code was sent.  |
+| `n/a`              | nothing        | `failed` — `not a dialable number`.   |
+
+A number with no leading `+` is read with **United States** as the assumed country, and the response tells you so. That assumption is wrong for most of the world, so send E.164.
+
+<Warning>
+  Deduplication matches on the normalized number, so a contact stored under a
+  differently normalized value will not match and a second contact is created.
+  Your `externalId` link is immune to this: it resolves the same contact
+  regardless of phone formatting.
+</Warning>
+
+## Adding a contact to a campaign
+
+Include `data.campaignId` on `contact.upserted` and the contact joins that outbound campaign as a lead, in the same request that syncs it.
+
+```json
+{
+  "event": "contact.upserted",
+  "eventId": "crm_01HX6B2P4WQF8ND3ZR7KT5YVMA",
+  "occurredAt": "2026-05-23T14:31:00.000Z",
+  "data": {
+    "externalId": "ext_contact_42",
+    "phoneNumber": "+14155550123",
+    "firstName": "Ada",
+    "campaignId": "3f8a1c54-9d2b-4e7a-b1c6-5a0d9e8f7c21"
+  }
+}
+```
+
+The campaign id is the last segment of the campaign URL in the dashboard, under **Campaigns**.
+
+What it does:
+
+- The contact is added as a **pending** lead. If the campaign is already running, the lead is queued for dialing immediately.
+- A contact that is **already a lead** of that campaign is left untouched. Its attempts, status and disposition history survive every re-sync, so a CRM that replays `contact.upserted` on each edit never resets a lead's progress.
+- Membership is only ever added. Dropping `campaignId` from a later event does **not** remove the lead — remove it in Ringee.
+
+<Note>
+  Campaigns exist only in organization workspaces, and the campaign must belong
+  to the same workspace as your integration. A `campaignId` that is not a UUID,
+  matches no campaign, or belongs to another workspace fails the event — and
+  because validation runs before any write, the contact is not synced either.
+  Correct it and resend with a new `eventId`.
+</Note>
 
 ## Sending events well
 
@@ -174,7 +348,13 @@ Sync only when a field Ringee cares about actually changes: name, phone, email, 
 
 <Accordion title="Use E.164 phone numbers" icon="phone">
 
-Ringee normalizes what it can, but `+14155550123` always wins over `(415) 555-0123`. A number Ringee cannot normalize may fail dedup against an existing contact.
+`+14155550123` always wins over `(415) 555-0123`. See [Phone numbers](#phone-numbers) for what Ringee does with the difference.
+
+</Accordion>
+
+<Accordion title="Treat warnings as bugs" icon="triangle-exclamation">
+
+An ignored field and an unmatched owner are invisible in production and obvious in the response. Fail your integration tests on any unexpected `warnings` entry.
 
 </Accordion>
 
@@ -199,5 +379,15 @@ Write the event to a local outbox table first, then attempt delivery. A contact 
   </Card>
   <Card title="Outbound webhooks" icon="webhook" href="/api/outbound-webhooks">
     Receive call activity back in your CRM
+  </Card>
+  <Card title="Logs and errors" icon="bug" href="/api/logs-and-errors">
+    Every inbound error message and how to fix it
+  </Card>
+  <Card
+    title="Build an integration"
+    icon="screwdriver-wrench"
+    href="/api/build-an-integration"
+  >
+    The full two-way sync, end to end
   </Card>
 </CardGroup>

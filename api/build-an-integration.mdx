@@ -75,6 +75,11 @@ activity even if it arrives first.
 
 Send `contact.upserted` and `company.upserted` when the relevant fields change — through an outbox, not inline with the save.
 
+Read `status` on every response, and log `warnings`: they are how you catch a
+field name Ringee does not know, or an `ownerEmail` that matches nobody. To
+enrol a synced contact in an outbound campaign in the same request, add
+[`data.campaignId`](/api/inbound-events#adding-a-contact-to-a-campaign).
+
 </Step>
 
 <Step title="Add the call button">
@@ -213,6 +218,8 @@ Your webhook function may use administrative database credentials — but **only
 
 - Contact created or updated in Ringee from a CRM change.
 - Contact archived in Ringee from a CRM delete.
+- A payload with a bad field returns `failed` and leaves nothing behind in Ringee.
+- A clean payload returns no `warnings`.
 - Click-to-call works for an authenticated user.
 - Contact without a phone, or on DNC, cannot be called.
 - No cross-organization data leaks.

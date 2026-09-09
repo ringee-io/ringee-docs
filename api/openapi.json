@@ -35,7 +35,7 @@
       "post": {
         "operationId": "receiveInboundEvent",
         "summary": "Send an inbound event",
-        "description": "Upsert or archive a contact or company from your CRM.\n\nReturns **202 Accepted** for any well-formed, authenticated request. The real result is in the `status` field of the response body \u2014 always read it.",
+        "description": "Upsert or archive a contact or company from your CRM.\n\nReturns **202 Accepted** for any authenticated request with a complete envelope. The real result is in the `status` field of the response body \u2014 always read it, and read `warnings` when it carries them.\n\nThe whole payload is validated before any record is written, so a `failed` event changed nothing.",
         "tags": ["CRM to Ringee"],
         "requestBody": {
           "required": true,
@@ -81,6 +81,7 @@
                       "email": "ada@example.com",
                       "companyExternalId": "ext_company_7",
                       "jobTitle": "Founder",
+                      "campaignId": "3f8a1c54-9d2b-4e7a-b1c6-5a0d9e8f7c21",
                       "ownerEmail": "rep@example.com",
                       "customFields": {
                         "tier": "vip"
@@ -153,12 +154,22 @@
                       "message": "duplicate eventId"
                     }
                   },
+                  "processed with warnings": {
+                    "summary": "Applied, with something ignored",
+                    "value": {
+                      "status": "processed",
+                      "eventId": "crm_9f1c2a7e",
+                      "warnings": [
+                        "Unknown contact.upserted fields were ignored: campagnId. Check them for typos."
+                      ]
+                    }
+                  },
                   "failed": {
-                    "summary": "Accepted but could not be applied",
+                    "summary": "Accepted, nothing applied",
                     "value": {
                       "status": "failed",
                       "eventId": "crm_9f1c2a7e",
-                      "message": "data.phoneNumber is required"
+                      "message": "data.externalId is required; data.phoneNumber is required"
                     }
                   }
                 }
@@ -166,7 +177,7 @@
             }
           },
           "400": {
-            "description": "The body is not a JSON object, or a required envelope field is missing.",
+            "description": "The body is not a JSON object, or the envelope is incomplete. Every envelope problem is listed in one message.",
             "content": {
               "application/json": {
                 "schema": {
@@ -624,7 +635,7 @@
           "data": {
             "type": "object",
             "required": ["externalId", "phoneNumber"],
-            "description": "Omit a field to leave it untouched. Sending `null`, `undefined` or an empty string does not overwrite an existing value.",
+            "description": "Omit a field to leave it untouched. Sending `null`, `undefined` or an empty string does not overwrite an existing value. The whole payload is validated before anything is written, so a rejected event leaves no partial contact behind.",
             "properties": {
               "externalId": {
                 "type": "string",
@@ -679,6 +690,13 @@
                 "description": "Position or title.",
                 "examples": ["Founder"],
                 "example": "Founder"
+              },
+              "campaignId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Ringee campaign to add this contact to as a lead. The contact joins as a pending lead, and is queued immediately when the campaign is already running; a contact that is already a lead of that campaign is left untouched. Campaigns exist only in organization workspaces, and the campaign must belong to the same workspace as the integration.",
+                "examples": ["3f8a1c54-9d2b-4e7a-b1c6-5a0d9e8f7c21"],
+                "example": "3f8a1c54-9d2b-4e7a-b1c6-5a0d9e8f7c21"
               },
               "ownerExternalId": {
                 "type": "string",
@@ -882,7 +900,12 @@
           },
           "message": {
             "type": "string",
-            "description": "Present on `skipped` and `failed`. Surface it in your sync logs."
+            "description": "Present on `skipped` and `failed`. On `failed` it lists every problem found, separated by `; `, so one request is enough to learn what to fix."
+          },
+          "warnings": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Non-fatal remarks about a payload that was applied anyway: an unknown or mistyped field that was ignored, a phone number read with an assumed country, an `ownerEmail` matching nobody in the workspace. Absent when there is nothing to report."
           }
         }
       },
